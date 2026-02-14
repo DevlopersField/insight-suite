@@ -24,6 +24,14 @@ export interface SecurityHeaderResult {
   recommendation: string;
 }
 
+// ─── Video Data ─────────────────────────────────────────────────────
+export interface VideoData {
+  type: "youtube" | "vimeo" | "other";
+  id: string;
+  url: string;
+  hasSchema: boolean;
+}
+
 // ─── Social / OG Tags ───────────────────────────────────────────────
 export interface SocialData {
   ogTitle: string;
@@ -52,6 +60,7 @@ export interface ImageInfo {
   title: string;
   width: number;
   height: number;
+  type: string;
 }
 
 // ─── Link Info ───────────────────────────────────────────────────────
@@ -82,6 +91,7 @@ export interface AuditData {
   tech: TechInfo[];
   security: SecurityHeaderResult[];
   fonts: FontInfo[];
+  videos: VideoData[];
 }
 
 // ─── DOM Scan Result (subset returned by content script) ─────────────
@@ -103,6 +113,7 @@ export interface DomScanResult {
   social: SocialData;
   tech: TechInfo[];
   fonts: FontInfo[];
+  videos: VideoData[];
 }
 
 // ─── Chrome Extension Messaging ──────────────────────────────────────

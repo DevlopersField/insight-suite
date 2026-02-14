@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download } from "lucide-react";
+import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download, Image as ImageIcon } from "lucide-react";
 import { usePageAnalysis } from "@/hooks/use-page-analysis";
 import { SummaryTab } from "@/components/diagnostic/SummaryTab";
 import { HeadersTab } from "@/components/diagnostic/HeadersTab";
@@ -7,10 +7,12 @@ import { DevCheckTab } from "@/components/diagnostic/DevCheckTab";
 import { SocialTab } from "@/components/diagnostic/SocialTab";
 import { ToolsTab } from "@/components/diagnostic/ToolsTab";
 import { FontsTab } from "@/components/diagnostic/FontsTab";
+import { ImagesTab } from "@/components/diagnostic/ImagesTab";
 
 const tabs = [
   { id: "summary", label: "Summary", icon: FileText },
   { id: "headers", label: "Headers", icon: ChevronRight },
+  { id: "images", label: "Images", icon: ImageIcon },
   { id: "devcheck", label: "Dev Check", icon: Code2 },
   { id: "fonts", label: "Fonts", icon: Type },
   { id: "social", label: "Social", icon: Share2 },
@@ -138,8 +140,8 @@ const Index = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
-                      ? "border-primary text-primary"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -153,6 +155,7 @@ const Index = () => {
           <div className="pb-8">
             {activeTab === "summary" && <SummaryTab data={data} />}
             {activeTab === "headers" && <HeadersTab data={data} />}
+            {activeTab === "images" && <ImagesTab data={data} />}
             {activeTab === "devcheck" && <DevCheckTab data={data} />}
             {activeTab === "fonts" && <FontsTab fonts={data.fonts} />}
             {activeTab === "social" && <SocialTab data={data} />}

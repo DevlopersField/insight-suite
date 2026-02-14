@@ -1,4 +1,4 @@
-import type { HeaderInfo, ImageInfo, LinkInfo, SocialData } from "./types";
+import type { HeaderInfo, ImageInfo, LinkInfo, SocialData, VideoData } from "./types";
 
 /** Extract the text content of a meta tag by name or property. */
 function getMeta(attr: "name" | "property", value: string): string {
@@ -48,13 +48,83 @@ export function scanHeaders(): HeaderInfo[] {
 /** Scan all <img> elements on the page. */
 export function scanImages(): ImageInfo[] {
     const imgs = document.querySelectorAll("img");
-    return Array.from(imgs).map((img) => ({
-        src: img.src || img.getAttribute("data-src") || "",
-        alt: img.alt ?? "",
-        title: img.title ?? "",
-        width: img.naturalWidth || img.width || 0,
-        height: img.naturalHeight || img.height || 0,
-    }));
+    return Array.from(imgs).map((img) => {
+        const src = img.src || img.getAttribute("data-src") || "";
+        let type = "unknown";
+
+        try {
+            // Use currentSrc if available as it's the actual loaded asset
+            const activeSrc = img.currentSrc || src;
+
+            if (activeSrc.startsWith('data:')) {
+                const mimeMatch = activeSrc.match(/^data:image\/([a-zA-Z0-9+-]+);/);
+                if (mimeMatch) {
+                    let mime = mimeMatch[1].toLowerCase();
+                    if (mime.includes('svg')) type = 'svg';
+                    else if (mime === 'jpeg') type = 'jpg';
+                    else type = mime;
+                } else {
+                    type = "data";
+                }
+            } else {
+                const url = new URL(activeSrc, window.location.href);
+                const pathname = url.pathname.toLowerCase();
+
+                // 1. Check common format parameters
+                const formatTerms = ["format", "fm", "ext", "output", "auto", "type"];
+                let foundParam = "";
+                for (const term of formatTerms) {
+                    const val = url.searchParams.get(term);
+                    if (val && ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif"].some(t => val.toLowerCase().includes(t))) {
+                        foundParam = val.toLowerCase();
+                        break;
+                    }
+                }
+
+                if (foundParam) {
+                    if (foundParam.includes('webp')) type = 'webp';
+                    else if (foundParam.includes('png')) type = 'png';
+                    else if (foundParam.includes('jpg') || foundParam.includes('jpeg')) type = 'jpg';
+                    else if (foundParam.includes('svg')) type = 'svg';
+                    else if (foundParam.includes('avif')) type = 'avif';
+                    else if (foundParam.includes('gif')) type = 'gif';
+                }
+
+                // 2. Check extension in pathname
+                if (type === "unknown" || type === "image") {
+                    const extMatch = pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|avif|bmp|ico)(?:[?#]|$)/);
+                    if (extMatch) {
+                        type = extMatch[1];
+                    }
+                }
+
+                // 3. Fallback: Search anywhere in the URL string
+                if (type === "unknown" || type === "image") {
+                    const formats = ["webp", "avif", "png", "jpg", "jpeg", "svg", "gif"];
+                    for (const f of formats) {
+                        if (activeSrc.toLowerCase().includes(f)) {
+                            type = f;
+                            break;
+                        }
+                    }
+                }
+
+                if (type === 'jpeg') type = 'jpg';
+                if (type === 'unknown') type = 'img';
+            }
+        } catch {
+            type = "img";
+        }
+
+        return {
+            src,
+            alt: img.alt ?? "",
+            title: img.title ?? "",
+            width: img.naturalWidth || img.width || 0,
+            height: img.naturalHeight || img.height || 0,
+            type: type || "img",
+        };
+    });
 }
 
 /** Scan all <a> elements on the page. */
@@ -97,6 +167,72 @@ export function scanSocialTags(): SocialData {
     };
 }
 
+/** Scan for video embeds (YouTube, Vimeo). */
+export function scanVideos(): VideoData[] {
+    const iframes = document.querySelectorAll("iframe");
+    const videos: VideoData[] = [];
+
+    iframes.forEach((iframe) => {
+        const src = iframe.src || "";
+        if (src.includes("youtube.com") || src.includes("youtu.be")) {
+            let id = "";
+            try {
+                const url = new URL(src);
+                id = url.pathname.split("/").pop() || "";
+            } catch { }
+
+            videos.push({
+                type: "youtube",
+                id,
+                url: src,
+                hasSchema: false, // Will be updated below
+            });
+        } else if (src.includes("vimeo.com")) {
+            let id = "";
+            try {
+                const url = new URL(src);
+                id = url.pathname.split("/").pop() || "";
+            } catch { }
+
+            videos.push({
+                type: "vimeo",
+                id,
+                url: src,
+                hasSchema: false,
+            });
+        }
+    });
+
+    const hasVideoSchema = checkVideoSchema();
+    if (hasVideoSchema) {
+        videos.forEach(v => v.hasSchema = true);
+    }
+
+    return videos;
+}
+
+/** Check if the page has VideoObject schema in JSON-LD. */
+function checkVideoSchema(): boolean {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (const script of Array.from(scripts)) {
+        try {
+            const content = script.textContent || "";
+            if (content.includes("VideoObject")) {
+                const json = JSON.parse(content);
+                // Handle both single object and array of objects
+                const items = Array.isArray(json) ? json : [json];
+                if (items.some(item =>
+                    item["@type"] === "VideoObject" ||
+                    (Array.isArray(item["@graph"]) && item["@graph"].some((g: any) => g["@type"] === "VideoObject"))
+                )) {
+                    return true;
+                }
+            }
+        } catch { }
+    }
+    return false;
+}
+
 /**
  * Run the full DOM scan and return all SEO-relevant data from the page.
  * This is the main entry point called from the content script.
@@ -107,6 +243,7 @@ export function scanDOM() {
     const images = scanImages();
     const links = scanLinks();
     const social = scanSocialTags();
+    const videos = scanVideos();
 
     return {
         ...basic,
@@ -114,5 +251,6 @@ export function scanDOM() {
         images,
         links,
         social,
+        videos,
     };
 }
