@@ -100,13 +100,73 @@ function injectedContentScan(): DomScanResult {
         order: i + 1,
     }));
 
-    const images = Array.from(document.querySelectorAll("img")).map((img) => ({
-        src: img.src || img.getAttribute("data-src") || "",
-        alt: img.alt ?? "",
-        title: img.title ?? "",
-        width: img.naturalWidth || img.width || 0,
-        height: img.naturalHeight || img.height || 0,
-    }));
+    const images = Array.from(document.querySelectorAll("img")).map((img) => {
+        const src = img.src || img.getAttribute("data-src") || "";
+        let type = "unknown";
+        try {
+            const activeSrc = img.currentSrc || src;
+            if (!activeSrc) {
+                type = "none";
+            } else if (activeSrc.startsWith('data:')) {
+                const match = activeSrc.match(/^data:image\/([a-zA-Z0-9+-]+);/);
+                type = match ? match[1].split('+')[0].toLowerCase() : "data";
+            } else {
+                const patterns = [
+                    /\.(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\?|#|$)/i,
+                    /[?&](?:format|fm|ext|type|output)=([^&?#]+)/i,
+                    /\/(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\/|$)/i
+                ];
+                for (const reg of patterns) {
+                    const match = activeSrc.match(reg);
+                    if (match && match[1]) {
+                        type = match[1].toLowerCase();
+                        break;
+                    }
+                }
+                if (type === "unknown") {
+                    const picture = img.closest('picture');
+                    if (picture) {
+                        const source = picture.querySelector('source');
+                        if (source && source.type) {
+                            type = source.type.split('/')[1]?.split('+')[0].toLowerCase() || "unknown";
+                        }
+                    }
+                }
+                if (type === "unknown") {
+                    const keywords = ["webp", "avif", "png", "jpg", "jpeg", "svg", "gif", "ico", "bmp"];
+                    const lowerSrc = activeSrc.toLowerCase();
+                    for (const k of keywords) {
+                        if (new RegExp(`\\b${k}\\b|\\.${k}`, 'i').test(lowerSrc)) {
+                            type = k;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch { type = "err"; }
+        if (type === 'jpeg') type = 'jpg';
+        if (type === 'unknown') type = 'img';
+
+        return {
+            src,
+            alt: img.alt ?? "",
+            title: img.title ?? "",
+            width: img.naturalWidth || img.width || 0,
+            height: img.naturalHeight || img.height || 0,
+            type
+        };
+    });
+
+    const videos = Array.from(document.querySelectorAll("iframe")).map(iframe => {
+        const src = iframe.src || "";
+        if (src.includes("youtube.com") || src.includes("youtu.be")) {
+            return { type: "youtube" as const, url: src, hasSchema: false, id: src.split("/").pop() || "" };
+        }
+        if (src.includes("vimeo.com")) {
+            return { type: "vimeo" as const, url: src, hasSchema: false, id: src.split("/").pop() || "" };
+        }
+        return null;
+    }).filter(Boolean);
 
     const currentHost = window.location.hostname;
     const links = Array.from(document.querySelectorAll("a[href]")).map((a) => {
@@ -295,6 +355,6 @@ function injectedContentScan(): DomScanResult {
         description, descriptionLength: description.length,
         canonical, robots, author, language, charset, viewport,
         headers, images, links, social,
-        tech, fonts,
+        tech, fonts, videos,
     };
 }

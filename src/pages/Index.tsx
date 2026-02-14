@@ -41,6 +41,16 @@ const Index = () => {
   const securityPass = data ? data.security.filter((s) => s.status === "pass").length : 0;
   const securityTotal = data ? data.security.length : 0;
 
+  const missingAltCount = data ? data.images.filter(img => !img.alt.trim()).length : 0;
+  const h1Count = data ? data.headers.filter(h => h.tag === "H1").length : 0;
+  const hasSkippedLevels = data ? data.headers.some((h, i) => {
+    if (i === 0) return false;
+    const prev = parseInt(data.headers[i - 1].tag.replace("H", ""));
+    const curr = parseInt(h.tag.replace("H", ""));
+    return curr > prev + 1;
+  }) : false;
+  const headerIssueCount = (h1Count !== 1 ? 1 : 0) + (hasSkippedLevels ? 1 : 0);
+
   const handleAnalyze = () => {
     analyze(urlInput);
   };
@@ -49,103 +59,107 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded bg-primary/15 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-primary" />
+        <div className="max-w-5xl mx-auto px-4 py-2.5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded bg-primary/15 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">Dev & SEO Insight Suite</h1>
+                <p className="text-[10px] text-muted-foreground leading-none">On-page diagnostics • Tech detection • Font/Alt audit</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-base font-semibold text-foreground tracking-tight">Dev & SEO Insight Suite</h1>
-              <p className="text-xs text-muted-foreground">On-page diagnostics • Tech detection • Font analysis • Security audit</p>
+
+            {/* URL Input - Compact Inline */}
+            <div className="flex-1 max-w-md flex gap-2">
+              <div className="relative flex-1">
+                <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder={isExtension ? "URL..." : "Enter URL..."}
+                  className="w-full h-8 bg-muted border border-border rounded pl-8 pr-3 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
+                  onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+                  readOnly={isExtension}
+                />
+              </div>
+              <button
+                onClick={handleAnalyze}
+                disabled={isLoading}
+                className="h-8 bg-primary text-primary-foreground px-3 rounded text-xs font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Search className="w-3.5 h-3.5" />
+                )}
+                {isLoading ? "..." : "Analyze"}
+              </button>
             </div>
           </div>
-
-          {/* URL Input */}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder={isExtension ? "Current tab URL..." : "Enter URL to analyze..."}
-                className="w-full bg-muted border border-border rounded pl-9 pr-4 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
-                onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-                readOnly={isExtension}
-              />
-            </div>
-            <button
-              onClick={handleAnalyze}
-              disabled={isLoading}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-              {isLoading ? "Analyzing..." : "Analyze"}
-            </button>
-          </div>
-
-          {/* Extension mode badge */}
-          {!isExtension && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <Download className="w-3 h-3" />
-              <span>Website mode — analyzing current page. Install the Chrome Extension for full analysis on any site.</span>
-            </div>
-          )}
         </div>
       </header>
 
       {/* Error State */}
       {error && (
-        <div className="max-w-5xl mx-auto px-4 py-3">
-          <div className="bg-destructive/10 border border-destructive/30 rounded p-3 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-            <p className="text-sm text-destructive">{error}</p>
+        <div className="max-w-5xl mx-auto px-4 py-2">
+          <div className="bg-destructive/10 border border-destructive/30 rounded p-2 flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive">{error}</p>
           </div>
         </div>
       )}
 
       {/* Loading State */}
       {isLoading && (
-        <div className="max-w-5xl mx-auto px-4 py-12 flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-sm text-muted-foreground">Scanning page...</p>
+        <div className="max-w-5xl mx-auto px-4 py-10 flex flex-col items-center gap-2">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <p className="text-xs text-muted-foreground">Scanning page...</p>
         </div>
       )}
 
       {/* Results */}
       {data && !isLoading && (
-        <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="max-w-5xl mx-auto px-4 py-3">
           {/* Quick Stats Bar */}
-          <div className="flex gap-4 mb-4 text-xs font-mono text-muted-foreground overflow-x-auto pb-1">
+          <div className="flex gap-4 mb-3 text-[10px] font-mono text-muted-foreground overflow-x-auto pb-1 whitespace-nowrap">
             <span>Title: <span className={data.titleLength > 60 ? "text-warning" : "text-success"}>{data.titleLength}ch</span></span>
             <span>Desc: <span className={data.descriptionLength >= 150 && data.descriptionLength <= 160 ? "text-success" : "text-warning"}>{data.descriptionLength}ch</span></span>
-            <span>H1: <span className="text-success">{data.headers.filter((h) => h.tag === "H1").length}</span></span>
+            <span>H1: <span className={h1Count === 1 ? "text-success" : "text-destructive"}>{h1Count}</span></span>
             <span>Images: <span className="text-foreground">{data.images.length}</span></span>
             <span>Links: <span className="text-foreground">{data.links.length}</span></span>
             <span>Security: <span className={securityPass === securityTotal ? "text-success" : "text-warning"}>{securityPass}/{securityTotal}</span></span>
-            <span>Tech: <span className="text-foreground">{data.tech.length} detected</span></span>
-            <span>Fonts: <span className="text-foreground">{data.fonts.length}</span></span>
+            <span>Tech: <span className="text-foreground">{data.tech.length}</span></span>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto">
+          <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto scrollbar-none">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const hasHeadersIssue = tab.id === "headers" && headerIssueCount > 0;
+              const hasImagesIssue = tab.id === "images" && missingAltCount > 0;
+
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-3 h-3" />
                   {tab.label}
+                  {hasHeadersIssue && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                  )}
+                  {hasImagesIssue && (
+                    <span className="bg-destructive text-white text-[8px] px-1 rounded-full min-w-[12px] h-3 flex items-center justify-center font-bold">
+                      {missingAltCount}
+                    </span>
+                  )}
                 </button>
               );
             })}

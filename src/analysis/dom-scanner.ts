@@ -53,68 +53,57 @@ export function scanImages(): ImageInfo[] {
         let type = "unknown";
 
         try {
-            // Use currentSrc if available as it's the actual loaded asset
             const activeSrc = img.currentSrc || src;
-
-            if (activeSrc.startsWith('data:')) {
-                const mimeMatch = activeSrc.match(/^data:image\/([a-zA-Z0-9+-]+);/);
-                if (mimeMatch) {
-                    let mime = mimeMatch[1].toLowerCase();
-                    if (mime.includes('svg')) type = 'svg';
-                    else if (mime === 'jpeg') type = 'jpg';
-                    else type = mime;
-                } else {
-                    type = "data";
-                }
+            if (!activeSrc) {
+                type = "none";
+            } else if (activeSrc.startsWith('data:')) {
+                const match = activeSrc.match(/^data:image\/([a-zA-Z0-9+-]+);/);
+                type = match ? match[1].split('+')[0] : "data";
             } else {
-                const url = new URL(activeSrc, window.location.href);
-                const pathname = url.pathname.toLowerCase();
+                // Try to find extension in the entire URL string
+                const patterns = [
+                    /\.(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\?|#|$)/i, // Standard extension
+                    /[?&](?:format|fm|ext|type|output)=([^&?#]+)/i,           // CDN parameter
+                    /\/(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\/|$)/i     // Path segment
+                ];
 
-                // 1. Check common format parameters
-                const formatTerms = ["format", "fm", "ext", "output", "auto", "type"];
-                let foundParam = "";
-                for (const term of formatTerms) {
-                    const val = url.searchParams.get(term);
-                    if (val && ["png", "jpg", "jpeg", "webp", "gif", "svg", "avif"].some(t => val.toLowerCase().includes(t))) {
-                        foundParam = val.toLowerCase();
+                for (const reg of patterns) {
+                    const match = activeSrc.match(reg);
+                    if (match && match[1]) {
+                        type = match[1].toLowerCase();
                         break;
                     }
                 }
 
-                if (foundParam) {
-                    if (foundParam.includes('webp')) type = 'webp';
-                    else if (foundParam.includes('png')) type = 'png';
-                    else if (foundParam.includes('jpg') || foundParam.includes('jpeg')) type = 'jpg';
-                    else if (foundParam.includes('svg')) type = 'svg';
-                    else if (foundParam.includes('avif')) type = 'avif';
-                    else if (foundParam.includes('gif')) type = 'gif';
-                }
-
-                // 2. Check extension in pathname
-                if (type === "unknown" || type === "image") {
-                    const extMatch = pathname.match(/\.(png|jpg|jpeg|webp|gif|svg|avif|bmp|ico)(?:[?#]|$)/);
-                    if (extMatch) {
-                        type = extMatch[1];
-                    }
-                }
-
-                // 3. Fallback: Search anywhere in the URL string
-                if (type === "unknown" || type === "image") {
-                    const formats = ["webp", "avif", "png", "jpg", "jpeg", "svg", "gif"];
-                    for (const f of formats) {
-                        if (activeSrc.toLowerCase().includes(f)) {
-                            type = f;
-                            break;
+                if (type === "unknown") {
+                    const picture = img.closest('picture');
+                    if (picture) {
+                        const source = picture.querySelector('source');
+                        if (source && source.type) {
+                            type = source.type.split('/')[1]?.split('+')[0].toLowerCase() || "unknown";
                         }
                     }
                 }
 
-                if (type === 'jpeg') type = 'jpg';
-                if (type === 'unknown') type = 'img';
+                // Loose keyword search as last fallback
+                if (type === "unknown") {
+                    const keywords = ["webp", "avif", "png", "jpg", "jpeg", "svg", "gif", "ico", "bmp"];
+                    const lowerSrc = activeSrc.toLowerCase();
+                    for (const k of keywords) {
+                        const wordBoundaryRegex = new RegExp(`\\b${k}\\b|\\.${k}`, 'i');
+                        if (wordBoundaryRegex.test(lowerSrc)) {
+                            type = k;
+                            break;
+                        }
+                    }
+                }
             }
         } catch {
-            type = "img";
+            type = "err";
         }
+
+        if (type === 'jpeg') type = 'jpg';
+        if (type === 'unknown') type = 'img';
 
         return {
             src,

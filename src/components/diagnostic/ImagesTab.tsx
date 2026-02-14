@@ -21,17 +21,17 @@ export const ImagesTab = ({ data }: Props) => {
     return (
         <div className="space-y-6">
             {/* Overview Stats */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-card rounded border border-border p-4">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Images Audit</div>
-                    <div className="flex items-end gap-2">
-                        <span className="text-2xl font-bold text-foreground">{images.length}</span>
-                        <span className="text-xs text-muted-foreground mb-1">Total Images</span>
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-card rounded border border-border p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Images Audit</div>
+                    <div className="flex items-end gap-1.5">
+                        <span className="text-xl font-bold text-foreground leading-none">{images.length}</span>
+                        <span className="text-[10px] text-muted-foreground mb-0.5">Total Assets</span>
                     </div>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-2 flex gap-1.5 flex-wrap">
                         <StatusBadge
                             status={imagesMissingAlt === 0 ? "pass" : "fail"}
-                            label={`${imagesWithAlt} with Alt`}
+                            label={`${imagesWithAlt} Alt OK`}
                         />
                         {imagesMissingAlt > 0 && (
                             <StatusBadge status="fail" label={`${imagesMissingAlt} Missing Alt`} />
@@ -39,20 +39,20 @@ export const ImagesTab = ({ data }: Props) => {
                     </div>
                 </div>
 
-                <div className="bg-card rounded border border-border p-4">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Video Schema</div>
-                    <div className="flex items-end gap-2">
-                        <span className="text-2xl font-bold text-foreground">{videos ? videos.length : 0}</span>
-                        <span className="text-xs text-muted-foreground mb-1">Videos Found</span>
+                <div className="bg-card rounded border border-border p-3">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Video Detection</div>
+                    <div className="flex items-end gap-1.5">
+                        <span className="text-xl font-bold text-foreground leading-none">{videos ? videos.length : 0}</span>
+                        <span className="text-[10px] text-muted-foreground mb-0.5">Embeds Found</span>
                     </div>
-                    <div className="mt-3">
+                    <div className="mt-2 text-xs">
                         {videos && videos.length > 0 ? (
                             <StatusBadge
                                 status={videos.every(v => v.hasSchema) ? "pass" : "fail"}
-                                label={videos.every(v => v.hasSchema) ? "All have Schema" : "Missing Schema"}
+                                label={videos.every(v => v.hasSchema) ? "Schema Valid" : "Missing Schema"}
                             />
                         ) : (
-                            <StatusBadge status="info" label="No videos detected" />
+                            <span className="text-[10px] text-muted-foreground italic">No videos detected</span>
                         )}
                     </div>
                 </div>
@@ -140,9 +140,11 @@ export const ImagesTab = ({ data }: Props) => {
                                     <td className="px-4 py-3">
                                         <span className={cn(
                                             "px-1.5 py-0.5 rounded border font-mono uppercase text-[10px]",
-                                            img.type === "webp" || img.type === "avif" ? "bg-success/10 border-success/20 text-success" : "bg-muted border-border text-muted-foreground"
+                                            (img.type === "webp" || img.type === "avif" || img.type === "png")
+                                                ? "bg-success/10 border-success/20 text-success"
+                                                : "bg-muted border-border text-muted-foreground"
                                         )}>
-                                            {img.type}
+                                            {img.type || "img"}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground font-mono">

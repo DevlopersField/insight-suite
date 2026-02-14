@@ -28,21 +28,21 @@ export const ToolsTab = () => {
     <div className="space-y-4">
       {categories.map(cat => (
         <div key={cat}>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{cat}</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 ml-1">{cat}</p>
+          <div className="grid grid-cols-2 gap-2">
             {tools.filter(t => t.category === cat).map(tool => (
               <a
                 key={tool.name}
                 href={tool.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-card rounded border border-border p-3 flex items-center gap-3 hover:border-primary/50 hover:bg-accent/50 transition-all group"
+                className="bg-card rounded border border-border p-2 flex items-center gap-2 hover:border-primary/50 hover:bg-accent/50 transition-all group min-h-[48px]"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{tool.name}</p>
-                  <p className="text-xs text-muted-foreground">{tool.description}</p>
+                  <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors truncate">{tool.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate leading-tight">{tool.description}</p>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
               </a>
             ))}
           </div>
