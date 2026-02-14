@@ -8,6 +8,7 @@ import { SocialTab } from "@/components/diagnostic/SocialTab";
 import { ToolsTab } from "@/components/diagnostic/ToolsTab";
 import { FontsTab } from "@/components/diagnostic/FontsTab";
 import { ImagesTab } from "@/components/diagnostic/ImagesTab";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const tabs = [
   { id: "summary", label: "Summary", icon: FileText },
@@ -66,8 +67,8 @@ const Index = () => {
                 <Shield className="w-3.5 h-3.5 text-primary" />
               </div>
               <div>
-                <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">Dev & SEO Insight Suite</h1>
-                <p className="text-[10px] text-muted-foreground leading-none">On-page diagnostics • Tech detection • Font/Alt audit</p>
+                <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">Dev Buddy</h1>
+                <p className="text-[10px] text-muted-foreground leading-none">Your professional SEO & Technical Audit Companion</p>
               </div>
             </div>
 
@@ -114,9 +115,33 @@ const Index = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="max-w-5xl mx-auto px-4 py-10 flex flex-col items-center gap-2">
-          <Loader2 className="w-6 h-6 text-primary animate-spin" />
-          <p className="text-xs text-muted-foreground">Scanning page...</p>
+        <div className="max-w-5xl mx-auto px-4 py-3 space-y-4">
+          {/* Skeleton Stats Bar */}
+          <div className="flex gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-2.5 w-16" />
+            ))}
+          </div>
+
+          {/* Skeleton Tabs */}
+          <div className="flex gap-2 border-b border-border pb-1">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-6 w-20" />
+            ))}
+          </div>
+
+          {/* Skeleton Content */}
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+            <Skeleton className="h-40 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </div>
         </div>
       )}
 

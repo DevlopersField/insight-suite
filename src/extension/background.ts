@@ -100,7 +100,7 @@ function injectedContentScan(): DomScanResult {
         order: i + 1,
     }));
 
-    const images = Array.from(document.querySelectorAll("img")).map((img) => {
+    const images = Array.from((document.body || document).querySelectorAll("img")).map((img) => {
         const src = img.src || img.getAttribute("data-src") || "";
         let type = "unknown";
         try {

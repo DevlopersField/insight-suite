@@ -47,7 +47,7 @@ export function scanHeaders(): HeaderInfo[] {
 
 /** Scan all <img> elements on the page. */
 export function scanImages(): ImageInfo[] {
-    const imgs = document.querySelectorAll("img");
+    const imgs = document.body ? document.body.querySelectorAll("img") : document.querySelectorAll("img");
     return Array.from(imgs).map((img) => {
         const src = img.src || img.getAttribute("data-src") || "";
         let type = "unknown";

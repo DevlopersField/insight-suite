@@ -140,9 +140,11 @@ export const ImagesTab = ({ data }: Props) => {
                                     <td className="px-4 py-3">
                                         <span className={cn(
                                             "px-1.5 py-0.5 rounded border font-mono uppercase text-[10px]",
-                                            (img.type === "webp" || img.type === "avif" || img.type === "png")
+                                            (img.type === "webp" || img.type === "avif" || img.type === "svg")
                                                 ? "bg-success/10 border-success/20 text-success"
-                                                : "bg-muted border-border text-muted-foreground"
+                                                : img.type === "png"
+                                                    ? "bg-warning/10 border-warning/20 text-warning"
+                                                    : "bg-muted border-border text-muted-foreground"
                                         )}>
                                             {img.type || "img"}
                                         </span>
