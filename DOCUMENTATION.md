@@ -2,58 +2,42 @@
 
 ## Architecture Overview
 
-**AuditLens** is built as a hybrid React application that can function both as a standalone web app and a Chrome Extension.
+**AuditLens** is a hybrid React application designed for high-reliability web auditing. It operates in two primary modes: **Extension Context** and **Web Context**.
 
-### Core Components
+### Core Modules (`src/analysis/`)
 
-1.  **Scanning Engine (`src/analysis/`)**:
-    *   `dom-scanner.ts`: Contains the primary logic for extracting metadata, headers, images, and links from the DOM.
-    *   `tech-detector.ts`: Logic for identifying frameworks and CMS platforms by inspecting signatures.
-    *   `types.ts`: Shared TypeScript interfaces for all audit data.
+1.  **Scanning Engine**:
+    *   `dom-scanner.ts`: The primary analyzer. It resolves relative URLs to absolute links during "Web Mode" analysis to ensure assets (images/links) render correctly.
+    *   `tech-detector.ts`: Inspects the DOM for framework signatures (React, Vue, CMS, etc.).
+    *   `font-scanner.ts`: Scans stylesheets and the FontFace API to identify typography.
 
-2.  **Chrome Extension Layer (`src/extension/`)**:
-    *   `background.ts`: The background service worker that manages tab injection and heavy scanning.
-    *   `content-script.ts`: Injected into target pages to execute DOM-based audits.
-    *   `messaging.ts`: Standardized communication protocols between popup and background.
+2.  **Scraper Logic (`src/hooks/use-page-analysis.ts`)**:
+    *   **fetchWithFallback**: A robust router that handles CORS bypassing. It tries AllOrigins, CORSProxy.io, and CodeTabs sequentially.
+    *   **analyzeHTML**: A direct entry point for analyzing raw HTML strings, bypassing the network layer entirely.
 
-3.  **UI Layer (`src/components/diagnostic/`)**:
-    *   Modular tab components (`ImagesTab`, `HeadersTab`, `SummaryTab`, etc.) for displaying structured audit results.
-    *   `MetricCard`: Reusable UI component for high-level statistics.
-    *   `StatusBadge`: Visual indicator for pass/fail/warn statuses.
+### Hybrid Environment Management
 
-## Scanning Logic & Audit Rules
+The app uses `isExtensionContext()` to determine if it should communicate with a Background Service Worker or use its internal Web Scraper.
 
-### Header Hierarchy
-The tool validates that headings (`H1-H6`) follow a logical structure.
-*   **H1 Check**: Flags cases where H1 is missing or multiple H1s are present.
-*   **Skipped Levels**: Identifies gaps in hierarchy (e.g., jumping from H1 to H3), which is crucial for accessibility.
+*   **Extension Mode**: Injects content scripts via `chrome.scripting.executeScript`.
+*   **Web Mode**: Uses the Multi-Proxy Scraper to fetch the target URL's source code, then parses it into a virtual DOM for scanning.
 
-### Image Audit
-*   **Scope**: By default, the scanner targets images within `document.body` to ignore technical or meta-level assets.
-*   **Format Detection**: Uses regex and `currentSrc` to identify formats. Highlights modern formats (**WebP**, **AVIF**, **SVG**) in Green. **PNG** is highlighted in Yellow to suggest further optimization.
-*   **Alt Text**: Maps images missing `alt` attributes and identifies empty strings as critical errors.
+## Key Audit Rules
 
-### Tech Detection
-Scans for common patterns including:
-*   CMS: WordPress, Shopify, Webflow.
-*   Frameworks: React, Vue, Next.js.
-*   Analytics: Google Analytics, Facebook Pixel.
+### URL Resolution
+In Web Mode, standard scanning of fetched HTML would result in broken relative links. 
+*   **Implementation**: The scanner accepts a `baseUrl` context.
+*   **Result**: Every `<img>` `src` and `<a>` `href` is transformed into an absolute URL using `new URL(path, baseUrl)`.
 
-## Development & Build
+### Intelligent Scraper Routing
+The scraper logic automatically handles the technical frustration of CORS:
+1.  **Attempt 1**: Primary Proxy (Fastest).
+2.  **Attempt 2**: Secondary Proxy (Different IP range).
+3.  **Attempt 3**: Tertiary Proxy (Strict CORS headers).
+4.  **Fallback**: UI prompts for manual source code paste if all automated attempts are blocked by the target site's firewall.
 
-### Development
-```bash
-npm run dev
-```
+## Build & Deployment
 
-### Production Build
-```bash
-npm run build
-```
-This command generates the `dist/` folder containing the optimized web app and the extension bundle.
-
-### Deployment (GitHub Pages)
-```bash
-npm run deploy
-```
-Utilizes `gh-pages` to host the web-based version of the suite.
+### Commands
+*   `npm run build`: Generates a production-ready `dist` folder compatible with both web hosting (Vercel/Netlify) and Chrome Web Store requirements.
+*   `npm run deploy`: Automated deployment to GitHub Pages via the `/insight-suite/` subpath.

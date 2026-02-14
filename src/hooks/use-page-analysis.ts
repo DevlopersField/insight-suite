@@ -10,14 +10,11 @@ interface UsePageAnalysisReturn {
     isExtension: boolean;
     currentUrl: string;
     analyze: (url?: string) => void;
+    analyzeHTML: (html: string, url: string) => void;
 }
 
 /**
  * React hook that bridges the analysis engine to the UI.
- *
- * - In Extension mode: sends ANALYZE_PAGE to the background service worker,
- *   which injects content scripts and fetches security headers.
- * - In Website mode: shows a prompt to install the extension (limited scanning).
  */
 export function usePageAnalysis(): UsePageAnalysisReturn {
     const [data, setData] = useState<AuditData | null>(null);
@@ -26,12 +23,10 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
     const [currentUrl, setCurrentUrl] = useState("");
     const isExtension = isExtensionContext();
 
-    // Check for context in URL params (Full View Mode)
     const searchParams = new URLSearchParams(window.location.search);
     const paramTabId = searchParams.get("tabId");
     const paramUrl = searchParams.get("url");
 
-    // Auto-detect current tab URL in extension mode
     useEffect(() => {
         if (isExtension) {
             if (paramUrl) {
@@ -44,6 +39,83 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
         }
     }, [isExtension, paramUrl]);
 
+    const performScan = useCallback(async (doc: Document | Element, url: string) => {
+        const { scanDOM } = await import("@/analysis/dom-scanner");
+        const { detectTech } = await import("@/analysis/tech-detector");
+        const { scanFonts } = await import("@/analysis/font-scanner");
+
+        const domData = scanDOM(doc, url);
+        const tech = detectTech(doc);
+        const fonts = scanFonts(doc);
+        const security = defaultSecurityResults();
+
+        return {
+            ...domData,
+            tech,
+            fonts,
+            security,
+        };
+    }, []);
+
+    const fetchWithFallback = async (targetUrl: string): Promise<string> => {
+        const proxies = [
+            async (url: string) => {
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error("AllOrigins failed");
+                const data = await response.json();
+                return data.contents;
+            },
+            async (url: string) => {
+                const response = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error("CodeTabs failed");
+                return await response.text();
+            },
+            async (url: string) => {
+                // corsproxy.io is generally reliable for simple GETs
+                const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+                if (!response.ok) throw new Error("CORSProxy.io failed");
+                return await response.text();
+            }
+        ];
+
+        let lastError: Error | null = null;
+        for (let i = 0; i < proxies.length; i++) {
+            try {
+                console.log(`Trying Proxy ${i + 1}...`);
+                const html = await proxies[i](targetUrl);
+                if (html && html.trim().length > 0) return html;
+                throw new Error("Empty content received");
+            } catch (err) {
+                console.warn(`Proxy ${i + 1} failed:`, err);
+                lastError = err instanceof Error ? err : new Error(String(err));
+            }
+        }
+        throw lastError || new Error("All scraping attempts failed");
+    };
+
+    const analyzeHTML = useCallback(async (html: string, url: string) => {
+        setIsLoading(true);
+        setError(null);
+        setData(null);
+        setCurrentUrl(url);
+
+        try {
+            const parser = new DOMParser();
+            const scanDoc = parser.parseFromString(html, "text/html");
+
+            const base = scanDoc.createElement('base');
+            base.href = url;
+            scanDoc.head.appendChild(base);
+
+            const result = await performScan(scanDoc, url);
+            setData(result);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "HTML analysis failed");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [performScan]);
+
     const analyze = useCallback(
         async (url?: string) => {
             setIsLoading(true);
@@ -52,7 +124,6 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
 
             try {
                 if (isExtension) {
-                    // Extension mode: delegate to background service worker
                     let targetTabId: number | undefined;
                     let targetUrl: string | undefined;
 
@@ -79,26 +150,35 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
                         throw new Error(response.error);
                     }
                 } else {
-                    // Website mode: limited self-analysis (analyze the current page only)
                     const targetUrl = url || window.location.href;
+
+                    if (!targetUrl.startsWith('http')) {
+                        throw new Error("Please enter a valid URL (starting with http:// or https://)");
+                    }
+
                     setCurrentUrl(targetUrl);
 
-                    // Import scanners dynamically
-                    const { scanDOM } = await import("@/analysis/dom-scanner");
-                    const { detectTech } = await import("@/analysis/tech-detector");
-                    const { scanFonts } = await import("@/analysis/font-scanner");
+                    if (targetUrl === window.location.href) {
+                        const result = await performScan(document, targetUrl);
+                        setData(result);
+                    } else {
+                        try {
+                            const html = await fetchWithFallback(targetUrl);
 
-                    const domData = scanDOM();
-                    const tech = detectTech();
-                    const fonts = scanFonts();
-                    const security = defaultSecurityResults();
+                            const parser = new DOMParser();
+                            const scanDoc = parser.parseFromString(html, "text/html");
 
-                    setData({
-                        ...domData,
-                        tech,
-                        fonts,
-                        security,
-                    });
+                            const base = scanDoc.createElement('base');
+                            base.href = targetUrl;
+                            scanDoc.head.appendChild(base);
+
+                            const scanResult = await performScan(scanDoc, targetUrl);
+                            setData(scanResult);
+                        } catch (err) {
+                            console.error("Remote analysis failed:", err);
+                            throw new Error("Unable to fetch site content automatically. This URL might be heavily protected or blocking all scrapers. You can still paste the source code manually using the 'Paste Source' tab.");
+                        }
+                    }
                 }
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Analysis failed");
@@ -106,8 +186,8 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
                 setIsLoading(false);
             }
         },
-        [isExtension, paramTabId, paramUrl]
+        [isExtension, paramTabId, paramUrl, performScan]
     );
 
-    return { data, isLoading, error, isExtension, currentUrl, analyze };
+    return { data, isLoading, error, isExtension, currentUrl, analyze, analyzeHTML };
 }

@@ -42,12 +42,12 @@ function parseFamiliesFromGoogleUrl(href: string): string[] {
 /**
  * Scan <link> tags for Google Fonts references.
  */
-function scanGoogleFontLinks(): Map<string, FontInfo> {
+function scanGoogleFontLinks(doc: Document | Element): Map<string, FontInfo> {
     const fonts = new Map<string, FontInfo>();
-    const links = document.querySelectorAll('link[href*="fonts.googleapis.com"]');
+    const links = doc.querySelectorAll('link[href*="fonts.googleapis.com"]');
 
     for (const link of Array.from(links)) {
-        const href = (link as HTMLLinkElement).href;
+        const href = (link as HTMLLinkElement).getAttribute("href") || "";
         const families = parseFamiliesFromGoogleUrl(href);
 
         for (const family of families) {
@@ -70,12 +70,12 @@ function scanGoogleFontLinks(): Map<string, FontInfo> {
 /**
  * Scan <link> tags for Adobe Typekit (use.typekit.net) references.
  */
-function scanTypekitLinks(): Map<string, FontInfo> {
+function scanTypekitLinks(doc: Document | Element): Map<string, FontInfo> {
     const fonts = new Map<string, FontInfo>();
-    const links = document.querySelectorAll('link[href*="use.typekit.net"]');
+    const links = doc.querySelectorAll('link[href*="use.typekit.net"]');
 
     for (const link of Array.from(links)) {
-        const href = (link as HTMLLinkElement).href;
+        const href = (link as HTMLLinkElement).getAttribute("href") || "";
         // Typekit URLs don't expose family names directly in the URL,
         // but we note it as an Adobe Fonts source
         fonts.set(`typekit:${href}`, {
@@ -94,13 +94,14 @@ function scanTypekitLinks(): Map<string, FontInfo> {
 /**
  * Scan document.fonts (FontFace API) for all loaded fonts.
  */
-function scanFontFaceApi(): Map<string, Partial<FontInfo>> {
+function scanFontFaceApi(doc: Document | Element): Map<string, Partial<FontInfo>> {
     const fonts = new Map<string, Partial<FontInfo>>();
 
-    if (!document.fonts) return fonts;
+    const targetDoc = doc instanceof Document ? doc : doc.ownerDocument;
+    if (!targetDoc || !targetDoc.fonts) return fonts;
 
     try {
-        document.fonts.forEach((face: FontFace) => {
+        targetDoc.fonts.forEach((face: FontFace) => {
             const family = face.family.replace(/^["']|["']$/g, "").trim();
             if (!family) return;
 
@@ -128,11 +129,14 @@ function scanFontFaceApi(): Map<string, Partial<FontInfo>> {
 /**
  * Scan stylesheets for @font-face declarations.
  */
-function scanStylesheetFontFaces(): Map<string, FontInfo> {
+function scanStylesheetFontFaces(doc: Document | Element): Map<string, FontInfo> {
     const fonts = new Map<string, FontInfo>();
 
+    const targetDoc = doc instanceof Document ? doc : doc.ownerDocument;
+    if (!targetDoc || !targetDoc.styleSheets) return fonts;
+
     try {
-        for (const sheet of Array.from(document.styleSheets)) {
+        for (const sheet of Array.from(targetDoc.styleSheets)) {
             let rules: CSSRuleList;
             try {
                 rules = sheet.cssRules;
@@ -194,20 +198,22 @@ function scanStylesheetFontFaces(): Map<string, FontInfo> {
 /**
  * Fallback: detect actually rendered fonts via getComputedStyle on key elements.
  */
-function scanComputedFonts(): Map<string, FontInfo> {
+function scanComputedFonts(doc: Document | Element): Map<string, FontInfo> {
     const fonts = new Map<string, FontInfo>();
     const elements = [
-        document.body,
-        document.querySelector("h1"),
-        document.querySelector("h2"),
-        document.querySelector("p"),
-        document.querySelector("a"),
-        document.querySelector("button"),
+        doc instanceof Document ? doc.body : doc,
+        doc.querySelector("h1"),
+        doc.querySelector("h2"),
+        doc.querySelector("p"),
+        doc.querySelector("a"),
+        doc.querySelector("button"),
     ].filter(Boolean) as Element[];
 
     for (const el of elements) {
         try {
-            const computed = getComputedStyle(el);
+            const computed = typeof window !== 'undefined' ? window.getComputedStyle(el) : null;
+            if (!computed) continue;
+
             const fontFamily = computed.fontFamily;
             if (!fontFamily) continue;
 
@@ -251,15 +257,15 @@ const KNOWN_GOOGLE_FONTS = new Set([
  * Main entry point: scan all fonts on the page.
  * Merges results from multiple detection methods.
  */
-export function scanFonts(): FontInfo[] {
+export function scanFonts(doc: Document | Element = document): FontInfo[] {
     const merged = new Map<string, FontInfo>();
 
     // Priority order: Google Font links > @font-face > FontFace API > computed
-    const googleFonts = scanGoogleFontLinks();
-    const typekitFonts = scanTypekitLinks();
-    const fontFaceFonts = scanStylesheetFontFaces();
-    const apiFonts = scanFontFaceApi();
-    const computedFonts = scanComputedFonts();
+    const googleFonts = scanGoogleFontLinks(doc);
+    const typekitFonts = scanTypekitLinks(doc);
+    const fontFaceFonts = scanStylesheetFontFaces(doc);
+    const apiFonts = scanFontFaceApi(doc);
+    const computedFonts = scanComputedFonts(doc);
 
     // Merge Google Font links first (highest confidence)
     for (const [key, font] of googleFonts) merged.set(key, font);

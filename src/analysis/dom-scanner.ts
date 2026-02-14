@@ -1,27 +1,27 @@
 import type { HeaderInfo, ImageInfo, LinkInfo, SocialData, VideoData, SchemaInfo } from "./types";
 
 /** Extract the text content of a meta tag by name or property. */
-function getMeta(attr: "name" | "property", value: string): string {
-    const el = document.querySelector(`meta[${attr}="${value}"]`);
+function getMeta(doc: Document | Element, attr: "name" | "property", value: string): string {
+    const el = doc.querySelector(`meta[${attr}="${value}"]`);
     return el?.getAttribute("content") ?? "";
 }
 
 /** Scan the page <title>, meta description, and core SEO fields. */
-export function scanBasicSEO() {
-    const title = document.title ?? "";
-    const description = getMeta("name", "description");
+export function scanBasicSEO(doc: Document | Element = document, url?: string) {
+    const title = (doc instanceof Document ? doc.title : (doc.querySelector('title')?.textContent ?? "")) || "";
+    const description = getMeta(doc, "name", "description");
     const canonical =
-        (document.querySelector('link[rel="canonical"]') as HTMLLinkElement)
+        (doc.querySelector('link[rel="canonical"]') as HTMLLinkElement)
             ?.href ?? "";
-    const robots = getMeta("name", "robots") || "index, follow";
-    const author = getMeta("name", "author");
-    const language = document.documentElement.lang ?? "";
-    const charsetMeta = document.querySelector("meta[charset]");
+    const robots = getMeta(doc, "name", "robots") || "index, follow";
+    const author = getMeta(doc, "name", "author");
+    const language = (doc instanceof Document ? doc.documentElement.lang : doc.getAttribute("lang")) ?? "";
+    const charsetMeta = doc.querySelector("meta[charset]");
     const charset = charsetMeta?.getAttribute("charset") ?? "UTF-8";
-    const viewport = getMeta("name", "viewport");
+    const viewport = getMeta(doc, "name", "viewport");
 
     return {
-        url: window.location.href,
+        url: url || (typeof window !== 'undefined' ? window.location.href : ""),
         title,
         titleLength: title.length,
         description,
@@ -36,8 +36,8 @@ export function scanBasicSEO() {
 }
 
 /** Scan all heading elements (H1–H6) preserving document order. */
-export function scanHeaders(): HeaderInfo[] {
-    const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
+export function scanHeaders(doc: Document | Element = document): HeaderInfo[] {
+    const headings = doc.querySelectorAll("h1, h2, h3, h4, h5, h6");
     return Array.from(headings).map((el, i) => ({
         tag: el.tagName,
         text: (el.textContent ?? "").trim().slice(0, 200),
@@ -46,25 +46,36 @@ export function scanHeaders(): HeaderInfo[] {
 }
 
 /** Scan all <img> elements on the page. */
-export function scanImages(): ImageInfo[] {
-    const imgs = document.body ? document.body.querySelectorAll("img") : document.querySelectorAll("img");
+export function scanImages(doc: Document | Element = document, baseUrl?: string): ImageInfo[] {
+    const imgs = doc.querySelectorAll("img");
+    const base = baseUrl || (typeof window !== 'undefined' ? window.location.href : "");
+
     return Array.from(imgs).map((img) => {
-        const src = img.src || img.getAttribute("data-src") || "";
+        const rawSrc = img.getAttribute("src") || img.getAttribute("data-src") || "";
+        let src = rawSrc;
         let type = "unknown";
 
+        // Resolve absolute URL
+        if (rawSrc && !rawSrc.startsWith('data:')) {
+            try {
+                src = new URL(rawSrc, base).href;
+            } catch {
+                src = rawSrc;
+            }
+        }
+
         try {
-            const activeSrc = img.currentSrc || src;
+            const activeSrc = img.getAttribute("currentSrc") || rawSrc;
             if (!activeSrc) {
                 type = "none";
             } else if (activeSrc.startsWith('data:')) {
                 const match = activeSrc.match(/^data:image\/([a-zA-Z0-9+-]+);/);
                 type = match ? match[1].split('+')[0] : "data";
             } else {
-                // Try to find extension in the entire URL string
                 const patterns = [
-                    /\.(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\?|#|$)/i, // Standard extension
-                    /[?&](?:format|fm|ext|type|output)=([^&?#]+)/i,           // CDN parameter
-                    /\/(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\/|$)/i     // Path segment
+                    /\.(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\?|#|$)/i,
+                    /[?&](?:format|fm|ext|type|output)=([^&?#]+)/i,
+                    /\/(webp|avif|png|jpg|jpeg|svg|gif|ico|bmp)(?:\/|$)/i
                 ];
 
                 for (const reg of patterns) {
@@ -85,7 +96,6 @@ export function scanImages(): ImageInfo[] {
                     }
                 }
 
-                // Loose keyword search as last fallback
                 if (type === "unknown") {
                     const keywords = ["webp", "avif", "png", "jpg", "jpeg", "svg", "gif", "ico", "bmp"];
                     const lowerSrc = activeSrc.toLowerCase();
@@ -107,62 +117,68 @@ export function scanImages(): ImageInfo[] {
 
         return {
             src,
-            alt: img.alt ?? "",
-            title: img.title ?? "",
-            width: img.naturalWidth || img.width || 0,
-            height: img.naturalHeight || img.height || 0,
+            alt: img.getAttribute("alt") ?? "",
+            title: img.getAttribute("title") ?? "",
+            width: (img as any).naturalWidth || (img as any).width || 0,
+            height: (img as any).naturalHeight || (img as any).height || 0,
             type: type || "img",
         };
     });
 }
 
 /** Scan all <a> elements on the page. */
-export function scanLinks(): LinkInfo[] {
-    const anchors = document.querySelectorAll("a[href]");
-    const currentHost = window.location.hostname;
+export function scanLinks(doc: Document | Element = document, baseUrl?: string): LinkInfo[] {
+    const anchors = doc.querySelectorAll("a[href]");
+    const currentHost = baseUrl ? new URL(baseUrl).hostname : (typeof window !== 'undefined' ? window.location.hostname : "");
 
     return Array.from(anchors).map((a) => {
         const anchor = a as HTMLAnchorElement;
+        const rawHref = anchor.getAttribute("href") || "";
+        let href = rawHref;
         let isExternal = false;
         try {
-            const linkUrl = new URL(anchor.href, window.location.href);
-            isExternal = linkUrl.hostname !== currentHost;
-        } catch {
-            // malformed URL — treat as internal
-        }
+            const absoluteUrl = new URL(rawHref, baseUrl || (typeof window !== 'undefined' ? window.location.href : ""));
+            href = absoluteUrl.href;
+            isExternal = absoluteUrl.hostname !== currentHost;
+        } catch { }
 
         return {
-            href: anchor.href,
+            href,
             text: (anchor.textContent ?? "").trim().slice(0, 120),
-            rel: anchor.rel ?? "",
+            rel: anchor.getAttribute("rel") ?? "",
             isExternal,
         };
     });
 }
 
 /** Scan Open Graph and Twitter Card meta tags. */
-export function scanSocialTags(): SocialData {
+export function scanSocialTags(doc: Document | Element = document, baseUrl?: string): SocialData {
+    const resolve = (val: string) => {
+        if (!val || !baseUrl) return val;
+        try { return new URL(val, baseUrl).href; } catch { return val; }
+    };
+
     return {
-        ogTitle: getMeta("property", "og:title"),
-        ogDescription: getMeta("property", "og:description"),
-        ogImage: getMeta("property", "og:image"),
-        ogUrl: getMeta("property", "og:url"),
-        ogType: getMeta("property", "og:type"),
-        twitterCard: getMeta("name", "twitter:card"),
-        twitterTitle: getMeta("name", "twitter:title"),
-        twitterDescription: getMeta("name", "twitter:description"),
-        twitterImage: getMeta("name", "twitter:image"),
-        twitterSite: getMeta("name", "twitter:site"),
+        ogTitle: getMeta(doc, "property", "og:title"),
+        ogDescription: getMeta(doc, "property", "og:description"),
+        ogImage: resolve(getMeta(doc, "property", "og:image")),
+        ogUrl: resolve(getMeta(doc, "property", "og:url")),
+        ogType: getMeta(doc, "property", "og:type"),
+        twitterCard: getMeta(doc, "name", "twitter:card"),
+        twitterTitle: getMeta(doc, "name", "twitter:title"),
+        twitterDescription: getMeta(doc, "name", "twitter:description"),
+        twitterImage: resolve(getMeta(doc, "name", "twitter:image")),
+        twitterSite: getMeta(doc, "name", "twitter:site"),
     };
 }
 
 /** Scan for video embeds (YouTube, Vimeo). */
-export function scanVideos(): VideoData[] {
-    const iframes = document.querySelectorAll("iframe");
+export function scanVideos(doc: Document | Element = document): VideoData[] {
+    const iframes = doc.querySelectorAll("iframe");
     const videos: VideoData[] = [];
 
     iframes.forEach((iframe) => {
-        const src = iframe.src || "";
+        const src = iframe.getAttribute("src") || "";
         if (src.includes("youtube.com") || src.includes("youtu.be")) {
             let id = "";
             try {
@@ -192,7 +208,7 @@ export function scanVideos(): VideoData[] {
         }
     });
 
-    const hasVideoSchema = checkVideoSchema();
+    const hasVideoSchema = checkVideoSchema(doc);
     if (hasVideoSchema) {
         videos.forEach(v => v.hasSchema = true);
     }
@@ -201,8 +217,8 @@ export function scanVideos(): VideoData[] {
 }
 
 /** Check if the page has VideoObject schema in JSON-LD. */
-function checkVideoSchema(): boolean {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+function checkVideoSchema(doc: Document | Element): boolean {
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
     for (const script of Array.from(scripts)) {
         try {
             const content = script.textContent || "";
@@ -223,10 +239,9 @@ function checkVideoSchema(): boolean {
 
 /** 
  * Scan for all JSON-LD schemas on the page.
- * Performs basic validation for required properties of common types.
  */
-export function scanSchemas(): SchemaInfo[] {
-    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+export function scanSchemas(doc: Document | Element = document): SchemaInfo[] {
+    const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
     const schemas: SchemaInfo[] = [];
 
     scripts.forEach((script) => {
@@ -240,7 +255,6 @@ export function scanSchemas(): SchemaInfo[] {
                 const errors: string[] = [];
                 const warnings: string[] = [];
 
-                // Basic validation rules
                 if (type === "Article" || type === "NewsArticle" || type === "BlogPosting") {
                     if (!item.headline) errors.push("Missing required property 'headline'");
                     if (!item.image) warnings.push("Missing property 'image'");
@@ -267,17 +281,16 @@ export function scanSchemas(): SchemaInfo[] {
 }
 
 /**
- * Run the full DOM scan and return all SEO-relevant data from the page.
- * This is the main entry point called from the content script.
+ * Run the full DOM scan.
  */
-export function scanDOM() {
-    const basic = scanBasicSEO();
-    const headers = scanHeaders();
-    const images = scanImages();
-    const links = scanLinks();
-    const social = scanSocialTags();
-    const videos = scanVideos();
-    const schemas = scanSchemas();
+export function scanDOM(doc: Document | Element = document, url?: string) {
+    const basic = scanBasicSEO(doc, url);
+    const headers = scanHeaders(doc);
+    const images = scanImages(doc, url);
+    const links = scanLinks(doc, url);
+    const social = scanSocialTags(doc, url);
+    const videos = scanVideos(doc);
+    const schemas = scanSchemas(doc);
 
     return {
         ...basic,

@@ -6,12 +6,13 @@ interface Detection {
     name: string;
     category: string;
     icon: string;
-    detect: () => number; // returns confidence 0–100
+    detect: (doc: Document | Element) => number; // returns confidence 0–100
 }
 
 /** Safely access a window property. */
 function win(key: string): any {
     try {
+        if (typeof window === 'undefined') return undefined;
         return (window as any)[key];
     } catch {
         return undefined;
@@ -19,22 +20,22 @@ function win(key: string): any {
 }
 
 /** Check if any <script> src contains a pattern. */
-function scriptSrcContains(pattern: string): boolean {
-    return Array.from(document.querySelectorAll("script[src]")).some((s) =>
-        (s as HTMLScriptElement).src.includes(pattern)
+function scriptSrcContains(doc: Document | Element, pattern: string): boolean {
+    return Array.from(doc.querySelectorAll("script[src]")).some((s) =>
+        (s.getAttribute("src") ?? "").includes(pattern)
     );
 }
 
 /** Check if any <link> href contains a pattern. */
-function linkHrefContains(pattern: string): boolean {
-    return Array.from(document.querySelectorAll("link[href]")).some((l) =>
-        (l as HTMLLinkElement).href.includes(pattern)
+function linkHrefContains(doc: Document | Element, pattern: string): boolean {
+    return Array.from(doc.querySelectorAll("link[href]")).some((l) =>
+        (l.getAttribute("href") ?? "").includes(pattern)
     );
 }
 
 /** Check if a meta[name="generator"] contains a value (case-insensitive). */
-function generatorContains(keyword: string): boolean {
-    const gen = document.querySelector('meta[name="generator"]');
+function generatorContains(doc: Document | Element, keyword: string): boolean {
+    const gen = doc.querySelector('meta[name="generator"]');
     return gen
         ? (gen.getAttribute("content") ?? "").toLowerCase().includes(keyword.toLowerCase())
         : false;
@@ -48,10 +49,10 @@ const detections: Detection[] = [
         name: "Next.js",
         category: "Framework",
         icon: "⚡",
-        detect: () => {
+        detect: (doc) => {
             if (win("__NEXT_DATA__")) return 98;
-            if (scriptSrcContains("/_next/")) return 90;
-            if (document.getElementById("__next")) return 85;
+            if (scriptSrcContains(doc, "/_next/")) return 90;
+            if (doc.querySelector("#__next")) return 85;
             return 0;
         },
     },
@@ -59,9 +60,9 @@ const detections: Detection[] = [
         name: "Nuxt.js",
         category: "Framework",
         icon: "💚",
-        detect: () => {
+        detect: (doc) => {
             if (win("__NUXT__")) return 95;
-            if (document.getElementById("__nuxt")) return 85;
+            if (doc.querySelector("#__nuxt")) return 85;
             return 0;
         },
     },
@@ -69,9 +70,9 @@ const detections: Detection[] = [
         name: "Gatsby",
         category: "Framework",
         icon: "🟣",
-        detect: () => {
-            if (document.getElementById("___gatsby")) return 92;
-            if (scriptSrcContains("/page-data/")) return 80;
+        detect: (doc) => {
+            if (doc.querySelector("#___gatsby")) return 92;
+            if (scriptSrcContains(doc, "/page-data/")) return 80;
             return 0;
         },
     },
@@ -81,13 +82,13 @@ const detections: Detection[] = [
         name: "React",
         category: "Library",
         icon: "⚛️",
-        detect: () => {
+        detect: (doc) => {
             if (win("React") || win("__REACT_DEVTOOLS_GLOBAL_HOOK__")) return 95;
-            if (document.querySelector("[data-reactroot]")) return 90;
-            const root = document.getElementById("root") || document.getElementById("__next");
+            if (doc.querySelector("[data-reactroot]")) return 90;
+            const root = doc.querySelector("#root") || doc.querySelector("#__next");
             if (root && (root as any)._reactRootContainer) return 92;
             // Check for React-specific attributes in DOM
-            if (document.querySelector("[data-reactid]")) return 85;
+            if (doc.querySelector("[data-reactid]")) return 85;
             return 0;
         },
     },
@@ -95,11 +96,11 @@ const detections: Detection[] = [
         name: "Vue.js",
         category: "Library",
         icon: "🟢",
-        detect: () => {
+        detect: (doc) => {
             if (win("Vue") || win("__VUE__")) return 95;
-            if (document.querySelector("[data-v-]") || document.querySelector("[data-v-app]")) return 88;
+            if (doc.querySelector("[data-v-]") || doc.querySelector("[data-v-app]")) return 88;
             // Check for Vue 3 app markers
-            const allEls = document.querySelectorAll("*");
+            const allEls = doc.querySelectorAll("*");
             for (const el of Array.from(allEls).slice(0, 50)) {
                 for (const attr of Array.from(el.attributes)) {
                     if (attr.name.startsWith("data-v-")) return 85;
@@ -112,12 +113,12 @@ const detections: Detection[] = [
         name: "Angular",
         category: "Framework",
         icon: "🅰️",
-        detect: () => {
+        detect: (doc) => {
             if (win("ng") || win("angular")) return 95;
-            if (document.querySelector("[ng-app]") || document.querySelector("[ng-controller]")) return 90;
-            if (document.querySelector("app-root") || document.querySelector("[_nghost]")) return 88;
+            if (doc.querySelector("[ng-app]") || doc.querySelector("[ng-controller]")) return 90;
+            if (doc.querySelector("app-root") || doc.querySelector("[_nghost]")) return 88;
             // Angular 2+ specific attributes
-            const allEls = document.querySelectorAll("*");
+            const allEls = doc.querySelectorAll("*");
             for (const el of Array.from(allEls).slice(0, 50)) {
                 for (const attr of Array.from(el.attributes)) {
                     if (attr.name.startsWith("_ngcontent") || attr.name.startsWith("_nghost")) return 85;
@@ -130,9 +131,9 @@ const detections: Detection[] = [
         name: "jQuery",
         category: "Library",
         icon: "📜",
-        detect: () => {
+        detect: (doc) => {
             if (win("jQuery") || win("$")?.fn?.jquery) return 95;
-            if (scriptSrcContains("jquery")) return 85;
+            if (scriptSrcContains(doc, "jquery")) return 85;
             return 0;
         },
     },
@@ -142,12 +143,12 @@ const detections: Detection[] = [
         name: "WordPress",
         category: "CMS",
         icon: "📝",
-        detect: () => {
+        detect: (doc) => {
             if (win("wp") && win("wp").customize) return 95;
-            if (generatorContains("wordpress")) return 92;
-            if (scriptSrcContains("/wp-content/") || scriptSrcContains("/wp-includes/")) return 90;
-            if (linkHrefContains("/wp-content/")) return 88;
-            if (document.querySelector('link[rel="https://api.w.org/"]')) return 85;
+            if (generatorContains(doc, "wordpress")) return 92;
+            if (scriptSrcContains(doc, "/wp-content/") || scriptSrcContains(doc, "/wp-includes/")) return 90;
+            if (linkHrefContains(doc, "/wp-content/")) return 88;
+            if (doc.querySelector('link[rel="https://api.w.org/"]')) return 85;
             return 0;
         },
     },
@@ -155,15 +156,15 @@ const detections: Detection[] = [
         name: "Shopify",
         category: "E-commerce",
         icon: "🛍️",
-        detect: () => {
+        detect: (doc) => {
             if (win("Shopify") && win("Shopify").shop) return 98;
             if (win("Shopify")) return 95;
-            if (scriptSrcContains("cdn.shopify.com")) return 92;
-            if (linkHrefContains("cdn.shopify.com")) return 90;
-            if (document.querySelector('meta[name="shopify-checkout-api-token"]')) return 90;
-            if (document.querySelector('link[href*="shopify"]')) return 80;
+            if (scriptSrcContains(doc, "cdn.shopify.com")) return 92;
+            if (linkHrefContains(doc, "cdn.shopify.com")) return 90;
+            if (doc.querySelector('meta[name="shopify-checkout-api-token"]')) return 90;
+            if (doc.querySelector('link[href*="shopify"]')) return 80;
             // Check for Shopify-specific elements
-            if (document.querySelector('[data-shopify]') || document.querySelector('input[name="checkout_url"]')) return 82;
+            if (doc.querySelector('[data-shopify]') || doc.querySelector('input[name="checkout_url"]')) return 82;
             return 0;
         },
     },
@@ -171,12 +172,12 @@ const detections: Detection[] = [
         name: "Shopify Theme",
         category: "E-commerce",
         icon: "🎨",
-        detect: () => {
+        detect: (doc) => {
             const shopify = win("Shopify");
             if (shopify?.theme?.name) return 95;
             if (shopify?.theme) return 90;
             // Check for Liquid template markers
-            if (document.querySelector('[data-section-type]') || document.querySelector('.shopify-section')) return 80;
+            if (doc.querySelector('[data-section-type]') || doc.querySelector('.shopify-section')) return 80;
             return 0;
         },
     },
@@ -184,10 +185,10 @@ const detections: Detection[] = [
         name: "Wix",
         category: "CMS",
         icon: "🔲",
-        detect: () => {
+        detect: (doc) => {
             if (win("wixBiSession")) return 95;
-            if (generatorContains("wix")) return 90;
-            if (scriptSrcContains("static.wixstatic.com")) return 88;
+            if (generatorContains(doc, "wix")) return 90;
+            if (scriptSrcContains(doc, "static.wixstatic.com")) return 88;
             return 0;
         },
     },
@@ -195,9 +196,9 @@ const detections: Detection[] = [
         name: "Squarespace",
         category: "CMS",
         icon: "⬛",
-        detect: () => {
+        detect: (doc) => {
             if (win("Static") && win("SQUARESPACE_CONTEXT")) return 95;
-            if (generatorContains("squarespace")) return 92;
+            if (generatorContains(doc, "squarespace")) return 92;
             return 0;
         },
     },
@@ -205,10 +206,10 @@ const detections: Detection[] = [
         name: "Webflow",
         category: "CMS",
         icon: "🌐",
-        detect: () => {
-            if (generatorContains("webflow")) return 95;
-            if (document.querySelector("html.w-mod-js")) return 88;
-            if (scriptSrcContains("webflow")) return 85;
+        detect: (doc) => {
+            if (generatorContains(doc, "webflow")) return 95;
+            if (doc.querySelector("html.w-mod-js")) return 88;
+            if (scriptSrcContains(doc, "webflow")) return 85;
             return 0;
         },
     },
@@ -218,10 +219,10 @@ const detections: Detection[] = [
         name: "Tailwind CSS",
         category: "Styling",
         icon: "🎨",
-        detect: () => {
+        detect: (doc) => {
             // Check for common Tailwind utility classes
-            const classes = document.body?.className ?? "";
-            const allClasses = document.body?.innerHTML?.slice(0, 5000) ?? "";
+            const classes = (doc instanceof Document ? doc.body?.className : doc.getAttribute("class")) ?? "";
+            const allClasses = doc.innerHTML?.slice(0, 5000) ?? "";
             const patterns = ["flex", "grid", "mt-", "p-", "text-", "bg-", "rounded", "shadow"];
             const matchCount = patterns.filter(
                 (p) => classes.includes(p) || allClasses.includes(`class="${p}`) || allClasses.includes(` ${p}`)
@@ -235,10 +236,10 @@ const detections: Detection[] = [
         name: "Bootstrap",
         category: "Styling",
         icon: "🅱️",
-        detect: () => {
-            if (linkHrefContains("bootstrap")) return 90;
-            if (scriptSrcContains("bootstrap")) return 88;
-            if (document.querySelector(".container") && document.querySelector(".row") && document.querySelector("[class*='col-']")) return 75;
+        detect: (doc) => {
+            if (linkHrefContains(doc, "bootstrap")) return 90;
+            if (scriptSrcContains(doc, "bootstrap")) return 88;
+            if (doc.querySelector(".container") && doc.querySelector(".row") && doc.querySelector("[class*='col-']")) return 75;
             return 0;
         },
     },
@@ -248,10 +249,10 @@ const detections: Detection[] = [
         name: "Google Analytics",
         category: "Analytics",
         icon: "📊",
-        detect: () => {
+        detect: (doc) => {
             if (win("ga") || win("gtag")) return 95;
             if (win("dataLayer")) return 88;
-            if (scriptSrcContains("google-analytics.com") || scriptSrcContains("googletagmanager.com")) return 90;
+            if (scriptSrcContains(doc, "google-analytics.com") || scriptSrcContains(doc, "googletagmanager.com")) return 90;
             return 0;
         },
     },
@@ -259,10 +260,10 @@ const detections: Detection[] = [
         name: "Google Tag Manager",
         category: "Analytics",
         icon: "🏷️",
-        detect: () => {
+        detect: (doc) => {
             if (win("google_tag_manager")) return 95;
-            if (scriptSrcContains("googletagmanager.com/gtm")) return 90;
-            if (document.querySelector('noscript iframe[src*="googletagmanager"]')) return 85;
+            if (scriptSrcContains(doc, "googletagmanager.com/gtm")) return 90;
+            if (doc.querySelector('noscript iframe[src*="googletagmanager"]')) return 85;
             return 0;
         },
     },
@@ -270,9 +271,9 @@ const detections: Detection[] = [
         name: "Facebook Pixel",
         category: "Analytics",
         icon: "📘",
-        detect: () => {
+        detect: (doc) => {
             if (win("fbq")) return 95;
-            if (scriptSrcContains("connect.facebook.net")) return 90;
+            if (scriptSrcContains(doc, "connect.facebook.net")) return 90;
             return 0;
         },
     },
@@ -280,9 +281,9 @@ const detections: Detection[] = [
         name: "Hotjar",
         category: "Analytics",
         icon: "🔥",
-        detect: () => {
+        detect: (doc) => {
             if (win("hj") || win("hotjar")) return 95;
-            if (scriptSrcContains("hotjar.com")) return 90;
+            if (scriptSrcContains(doc, "hotjar.com")) return 90;
             return 0;
         },
     },
@@ -292,10 +293,10 @@ const detections: Detection[] = [
         name: "Vercel",
         category: "Hosting",
         icon: "▲",
-        detect: () => {
-            if (win("__NEXT_DATA__") && document.querySelector('meta[name="x-vercel"]')) return 90;
+        detect: (doc) => {
+            if (win("__NEXT_DATA__") && doc.querySelector('meta[name="x-vercel"]')) return 90;
             // X-Vercel header can't be read from JS, but Vercel analytics can
-            if (scriptSrcContains("vercel-analytics") || scriptSrcContains("va.vercel-scripts.com")) return 85;
+            if (scriptSrcContains(doc, "vercel-analytics") || scriptSrcContains(doc, "va.vercel-scripts.com")) return 85;
             return 0;
         },
     },
@@ -303,9 +304,9 @@ const detections: Detection[] = [
         name: "Cloudflare",
         category: "CDN",
         icon: "☁️",
-        detect: () => {
-            if (scriptSrcContains("cloudflare") || scriptSrcContains("cdnjs.cloudflare.com")) return 80;
-            if (document.querySelector('script[data-cf-beacon]')) return 90;
+        detect: (doc) => {
+            if (scriptSrcContains(doc, "cloudflare") || scriptSrcContains(doc, "cdnjs.cloudflare.com")) return 80;
+            if (doc.querySelector('script[data-cf-beacon]')) return 90;
             return 0;
         },
     },
@@ -315,9 +316,9 @@ const detections: Detection[] = [
         name: "Stripe",
         category: "Payments",
         icon: "💳",
-        detect: () => {
+        detect: (doc) => {
             if (win("Stripe")) return 95;
-            if (scriptSrcContains("js.stripe.com")) return 92;
+            if (scriptSrcContains(doc, "js.stripe.com")) return 92;
             return 0;
         },
     },
@@ -325,9 +326,9 @@ const detections: Detection[] = [
         name: "PayPal",
         category: "Payments",
         icon: "💰",
-        detect: () => {
+        detect: (doc) => {
             if (win("paypal")) return 95;
-            if (scriptSrcContains("paypal.com/sdk")) return 92;
+            if (scriptSrcContains(doc, "paypal.com/sdk")) return 92;
             return 0;
         },
     },
@@ -337,12 +338,12 @@ const detections: Detection[] = [
  * Run all technology detections and return those with confidence > 0.
  * Sorted by confidence (highest first).
  */
-export function detectTech(): TechInfo[] {
+export function detectTech(doc: Document | Element = document): TechInfo[] {
     const results: TechInfo[] = [];
 
     for (const d of detections) {
         try {
-            const confidence = d.detect();
+            const confidence = d.detect(doc);
             if (confidence > 0) {
                 results.push({
                     name: d.name,
