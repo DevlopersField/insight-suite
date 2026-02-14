@@ -1,4 +1,4 @@
-import { AuditData } from "@/lib/mock-data";
+import type { AuditData } from "@/analysis/types";
 import { MetricCard } from "./MetricCard";
 import { StatusBadge } from "./StatusBadge";
 
