@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download, FileJson, Image as ImageIcon } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download, FileJson, Image as ImageIcon, ExternalLink, Maximize2 } from "lucide-react";
 import { usePageAnalysis } from "@/hooks/use-page-analysis";
 import { SummaryTab } from "@/components/diagnostic/SummaryTab";
 import { HeadersTab } from "@/components/diagnostic/HeadersTab";
@@ -76,19 +76,35 @@ const Index = () => {
     analyze(urlInput);
   };
 
+  const handleOpenFullView = async () => {
+    if (!isExtension) return;
+    try {
+      const { getActiveTab } = await import("@/extension/messaging");
+      const tab = await getActiveTab();
+      if (tab) {
+        const fullViewUrl = chrome.runtime.getURL(`index.html?tabId=${tab.tabId}&url=${encodeURIComponent(tab.url)}`);
+        chrome.tabs.create({ url: fullViewUrl });
+      }
+    } catch (err) {
+      console.error("Failed to open full view:", err);
+    }
+  };
+
+  const isFullView = new URLSearchParams(window.location.search).has("tabId");
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${!isFullView && isExtension ? 'extension-popup' : ''}`}>
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-2.5">
+        <div className={`${isFullView ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-2.5`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded bg-primary/15 flex items-center justify-center">
                 <Shield className="w-3.5 h-3.5 text-primary" />
               </div>
-              <div>
+              <div className="shrink-0">
                 <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">Dev Buddy</h1>
-                <p className="text-[10px] text-muted-foreground leading-none">Your professional SEO & Technical Audit Companion</p>
+                <p className="text-[10px] text-muted-foreground leading-none">Professional Audit Companion</p>
               </div>
             </div>
 
@@ -103,7 +119,7 @@ const Index = () => {
                   placeholder={isExtension ? "URL..." : "Enter URL..."}
                   className="w-full h-8 bg-muted border border-border rounded pl-8 pr-3 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors"
                   onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-                  readOnly={isExtension}
+                  readOnly={isExtension && !isFullView}
                 />
               </div>
               <button
@@ -118,6 +134,21 @@ const Index = () => {
                 )}
                 {isLoading ? "..." : "Analyze"}
               </button>
+            </div>
+
+            <div className="flex items-center gap-2 border-l border-border pl-4">
+              {isExtension && !isFullView && (
+                <button
+                  onClick={handleOpenFullView}
+                  title="Open in Full View"
+                  className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card hover:border-primary/50 text-muted-foreground hover:text-primary transition-all"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <div className="text-[10px] font-mono whitespace-nowrap hidden sm:block">
+                <span className="opacity-40">v</span>1.0.0
+              </div>
             </div>
           </div>
         </div>
@@ -135,7 +166,7 @@ const Index = () => {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="max-w-5xl mx-auto px-4 py-3 space-y-4">
+        <div className={`${isFullView ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-3 space-y-4`}>
           {/* Skeleton Stats Bar */}
           <div className="flex gap-4">
             {[...Array(6)].map((_, i) => (
@@ -167,7 +198,7 @@ const Index = () => {
 
       {/* Results */}
       {data && !isLoading && (
-        <div className="max-w-5xl mx-auto px-4 py-3">
+        <div className={`${isFullView ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-3`}>
           {/* Quick Stats Bar */}
           <div className="flex gap-4 mb-3 text-[10px] font-mono text-muted-foreground overflow-x-auto pb-1 whitespace-nowrap">
             <span>Title: <span className={data.titleLength > 60 ? "text-warning" : "text-success"}>{data.titleLength}ch</span></span>

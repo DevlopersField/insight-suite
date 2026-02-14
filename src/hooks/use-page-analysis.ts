@@ -26,14 +26,23 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
     const [currentUrl, setCurrentUrl] = useState("");
     const isExtension = isExtensionContext();
 
+    // Check for context in URL params (Full View Mode)
+    const searchParams = new URLSearchParams(window.location.search);
+    const paramTabId = searchParams.get("tabId");
+    const paramUrl = searchParams.get("url");
+
     // Auto-detect current tab URL in extension mode
     useEffect(() => {
         if (isExtension) {
-            getActiveTab().then((tab) => {
-                if (tab?.url) setCurrentUrl(tab.url);
-            });
+            if (paramUrl) {
+                setCurrentUrl(paramUrl);
+            } else {
+                getActiveTab().then((tab) => {
+                    if (tab?.url) setCurrentUrl(tab.url);
+                });
+            }
         }
-    }, [isExtension]);
+    }, [isExtension, paramUrl]);
 
     const analyze = useCallback(
         async (url?: string) => {
@@ -44,14 +53,24 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
             try {
                 if (isExtension) {
                     // Extension mode: delegate to background service worker
-                    const tab = await getActiveTab();
-                    if (!tab) throw new Error("No active tab found. Open a website first.");
+                    let targetTabId: number | undefined;
+                    let targetUrl: string | undefined;
 
-                    setCurrentUrl(tab.url);
+                    if (paramTabId) {
+                        targetTabId = parseInt(paramTabId);
+                        targetUrl = paramUrl || "";
+                    } else {
+                        const tab = await getActiveTab();
+                        if (!tab) throw new Error("No active tab found. Open a website first.");
+                        targetTabId = tab.tabId;
+                        targetUrl = tab.url;
+                    }
+
+                    setCurrentUrl(targetUrl);
 
                     const response = await sendToBackground({
                         type: "ANALYZE_PAGE",
-                        tabId: tab.tabId,
+                        tabId: targetTabId,
                     });
 
                     if (response.type === "ANALYSIS_RESULT") {
@@ -87,7 +106,7 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
                 setIsLoading(false);
             }
         },
-        [isExtension]
+        [isExtension, paramTabId, paramUrl]
     );
 
     return { data, isLoading, error, isExtension, currentUrl, analyze };

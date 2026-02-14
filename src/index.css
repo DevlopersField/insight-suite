@@ -67,9 +67,12 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    margin: 0;
+  }
+
+  .extension-popup {
     width: 600px;
     min-width: 600px;
-    margin: 0;
   }
 
   code,
