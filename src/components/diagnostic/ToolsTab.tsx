@@ -13,6 +13,8 @@ const tools: Tool[] = [
   { name: "W3C Validator", description: "HTML markup validation", url: "https://validator.w3.org/", category: "Validation" },
   { name: "CSS Validator", description: "CSS stylesheet validation", url: "https://jigsaw.w3.org/css-validator/", category: "Validation" },
   { name: "Rich Results Test", description: "Structured data validation", url: "https://search.google.com/test/rich-results", category: "SEO" },
+  { name: "Schema.org Validator", description: "Validate structured data markup", url: "https://validator.schema.org/", category: "Validation" },
+  { name: "JSON-LD Playground", description: "Test & visualize JSON-LD schemas", url: "https://json-ld.org/playground/", category: "Validation" },
   { name: "Mobile-Friendly Test", description: "Mobile rendering check", url: "https://search.google.com/test/mobile-friendly", category: "SEO" },
   { name: "Security Headers", description: "HTTP security analysis", url: "https://securityheaders.com/", category: "Security" },
   { name: "SSL Labs", description: "SSL/TLS configuration", url: "https://www.ssllabs.com/ssltest/", category: "Security" },
