@@ -15,9 +15,10 @@ interface UsePageAnalysisReturn {
 /**
  * React hook that bridges the analysis engine to the UI.
  *
- * - In Extension mode: sends ANALYZE_PAGE to the background service worker,
- *   which injects content scripts and fetches security headers.
- * - In Website mode: shows a prompt to install the extension (limited scanning).
+ * - In Extension mode: sends ANALYZE_PAGE to background service worker,
+ *   which injects the content scanner into the active tab's DOM.
+ * - In Website mode: scans the CURRENT PAGE's DOM (the page Insight Suite
+ *   is loaded on). For analyzing *other* sites, the extension is required.
  */
 export function usePageAnalysis(): UsePageAnalysisReturn {
     const [data, setData] = useState<AuditData | null>(null);
@@ -32,6 +33,8 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
             getActiveTab().then((tab) => {
                 if (tab?.url) setCurrentUrl(tab.url);
             });
+        } else {
+            setCurrentUrl(window.location.href);
         }
     }, [isExtension]);
 
@@ -43,7 +46,8 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
 
             try {
                 if (isExtension) {
-                    // Extension mode: delegate to background service worker
+                    // ── Extension mode ──────────────────────────────────────
+                    // Background worker injects scanner into the ACTIVE TAB's DOM
                     const tab = await getActiveTab();
                     if (!tab) throw new Error("No active tab found. Open a website first.");
 
@@ -60,19 +64,29 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
                         throw new Error(response.error);
                     }
                 } else {
-                    // Website mode: limited self-analysis (analyze the current page only)
-                    const targetUrl = url || window.location.href;
-                    setCurrentUrl(targetUrl);
+                    // ── Website mode ────────────────────────────────────────
+                    // Scans the current page's actual DOM (the page this app is on)
+                    const pageUrl = url || window.location.href;
+                    setCurrentUrl(pageUrl);
 
-                    // Import scanners dynamically
+                    // Import scanners dynamically to tree-shake in extension builds
                     const { scanDOM } = await import("@/analysis/dom-scanner");
                     const { detectTech } = await import("@/analysis/tech-detector");
                     const { scanFonts } = await import("@/analysis/font-scanner");
+                    const { auditSecurityHeaders } = await import("@/analysis/security-auditor");
 
+                    // Scan this page's live DOM
                     const domData = scanDOM();
                     const tech = detectTech();
                     const fonts = scanFonts();
-                    const security = defaultSecurityResults();
+
+                    // Try fetching security headers (will fail cross-origin, but works for same-origin)
+                    let security = defaultSecurityResults();
+                    try {
+                        security = await auditSecurityHeaders(pageUrl);
+                    } catch {
+                        // CORS restriction — show defaults with "unknown" status
+                    }
 
                     setData({
                         ...domData,
