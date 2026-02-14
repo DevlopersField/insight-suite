@@ -275,7 +275,7 @@ const Index = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-1 mb-6 border-b border-border sticky top-14 bg-background/80 backdrop-blur-md z-10 py-1">
+          <div className="flex flex-wrap gap-1 mb-6 border-b border-border sticky top-14 bg-background/80 backdrop-blur-md z-10 py-1 pb-0">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const hasHeadersIssue = tab.id === "headers" && headerIssueCount > 0;
