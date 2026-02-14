@@ -1,4 +1,6 @@
 import { ExternalLink } from "lucide-react";
+import { FontsTab } from "./FontsTab";
+import type { FontInfo } from "@/analysis/types";
 
 interface Tool {
   name: string;
@@ -21,14 +23,25 @@ const tools: Tool[] = [
   { name: "Lighthouse", description: "Full audit via Chrome DevTools", url: "https://developer.chrome.com/docs/lighthouse/", category: "Performance" },
 ];
 
-export const ToolsTab = () => {
+interface ToolsTabProps {
+  fonts?: FontInfo[];
+}
+
+export const ToolsTab: React.FC<ToolsTabProps> = ({ fonts }) => {
   const categories = [...new Set(tools.map(t => t.category))];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {fonts && fonts.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider ml-1">Detected Fonts</p>
+          <FontsTab fonts={fonts} />
+        </div>
+      )}
+
       {categories.map(cat => (
-        <div key={cat}>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 ml-1">{cat}</p>
+        <div key={cat} className="space-y-2">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider ml-1">{cat}</p>
           <div className="grid grid-cols-2 gap-2">
             {tools.filter(t => t.category === cat).map(tool => (
               <a

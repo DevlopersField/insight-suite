@@ -1,4 +1,4 @@
-import type { HeaderInfo, ImageInfo, LinkInfo, SocialData, VideoData } from "./types";
+import type { HeaderInfo, ImageInfo, LinkInfo, SocialData, VideoData, SchemaInfo } from "./types";
 
 /** Extract the text content of a meta tag by name or property. */
 function getMeta(attr: "name" | "property", value: string): string {
@@ -174,7 +174,7 @@ export function scanVideos(): VideoData[] {
                 type: "youtube",
                 id,
                 url: src,
-                hasSchema: false, // Will be updated below
+                hasSchema: false,
             });
         } else if (src.includes("vimeo.com")) {
             let id = "";
@@ -208,7 +208,6 @@ function checkVideoSchema(): boolean {
             const content = script.textContent || "";
             if (content.includes("VideoObject")) {
                 const json = JSON.parse(content);
-                // Handle both single object and array of objects
                 const items = Array.isArray(json) ? json : [json];
                 if (items.some(item =>
                     item["@type"] === "VideoObject" ||
@@ -222,6 +221,51 @@ function checkVideoSchema(): boolean {
     return false;
 }
 
+/** 
+ * Scan for all JSON-LD schemas on the page.
+ * Performs basic validation for required properties of common types.
+ */
+export function scanSchemas(): SchemaInfo[] {
+    const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    const schemas: SchemaInfo[] = [];
+
+    scripts.forEach((script) => {
+        try {
+            const content = script.textContent || "";
+            const json = JSON.parse(content);
+            const items = Array.isArray(json) ? json : [json];
+
+            items.forEach((item) => {
+                const type = item["@type"] || "unknown";
+                const errors: string[] = [];
+                const warnings: string[] = [];
+
+                // Basic validation rules
+                if (type === "Article" || type === "NewsArticle" || type === "BlogPosting") {
+                    if (!item.headline) errors.push("Missing required property 'headline'");
+                    if (!item.image) warnings.push("Missing property 'image'");
+                } else if (type === "Product") {
+                    if (!item.name) errors.push("Missing required property 'name'");
+                    if (!item.offers) warnings.push("Missing property 'offers'");
+                } else if (type === "Organization") {
+                    if (!item.name) errors.push("Missing required property 'name'");
+                    if (!item.url) warnings.push("Missing property 'url'");
+                }
+
+                schemas.push({
+                    type: Array.isArray(type) ? type.join(", ") : type,
+                    data: item,
+                    isValid: errors.length === 0,
+                    errors,
+                    warnings,
+                });
+            });
+        } catch { }
+    });
+
+    return schemas;
+}
+
 /**
  * Run the full DOM scan and return all SEO-relevant data from the page.
  * This is the main entry point called from the content script.
@@ -233,6 +277,7 @@ export function scanDOM() {
     const links = scanLinks();
     const social = scanSocialTags();
     const videos = scanVideos();
+    const schemas = scanSchemas();
 
     return {
         ...basic,
@@ -241,5 +286,6 @@ export function scanDOM() {
         links,
         social,
         videos,
+        schemas,
     };
 }

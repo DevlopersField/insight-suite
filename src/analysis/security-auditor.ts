@@ -76,6 +76,9 @@ export async function auditSecurityHeaders(url: string): Promise<SecurityHeaderR
     const results: SecurityHeaderResult[] = [];
 
     try {
+        if (!url.toLowerCase().startsWith('http')) {
+            throw new Error("Invalid protocol");
+        }
         // Fetch with no-cors might limit headers, but in extension context it works fine
         const response = await fetch(url, {
             method: "HEAD",

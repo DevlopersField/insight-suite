@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download, Image as ImageIcon } from "lucide-react";
+import { Search, Globe, FileText, Code2, Share2, Wrench, Type, ChevronRight, Shield, Loader2, AlertCircle, Download, FileJson, Image as ImageIcon } from "lucide-react";
 import { usePageAnalysis } from "@/hooks/use-page-analysis";
 import { SummaryTab } from "@/components/diagnostic/SummaryTab";
 import { HeadersTab } from "@/components/diagnostic/HeadersTab";
@@ -8,14 +8,19 @@ import { SocialTab } from "@/components/diagnostic/SocialTab";
 import { ToolsTab } from "@/components/diagnostic/ToolsTab";
 import { FontsTab } from "@/components/diagnostic/FontsTab";
 import { ImagesTab } from "@/components/diagnostic/ImagesTab";
+import { SchemaTab } from "@/components/diagnostic/SchemaTab";
+import { ImagesSEOTab } from "@/components/diagnostic/ImagesSEOTab";
+import { LinksAuditTab } from "@/components/diagnostic/LinksAuditTab";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const tabs = [
   { id: "summary", label: "Summary", icon: FileText },
   { id: "headers", label: "Headers", icon: ChevronRight },
   { id: "images", label: "Images", icon: ImageIcon },
+  { id: "images-seo", label: "Image SEO", icon: ImageIcon },
+  { id: "links", label: "Links", icon: Globe },
+  { id: "schema", label: "Schema", icon: FileJson },
   { id: "devcheck", label: "Dev Check", icon: Code2 },
-  { id: "fonts", label: "Fonts", icon: Type },
   { id: "social", label: "Social", icon: Share2 },
   { id: "tools", label: "Tools", icon: Wrench },
 ] as const;
@@ -51,6 +56,21 @@ const Index = () => {
     return curr > prev + 1;
   }) : false;
   const headerIssueCount = (h1Count !== 1 ? 1 : 0) + (hasSkippedLevels ? 1 : 0);
+
+  const schemaErrorCount = data ? data.schemas.filter(s => !s.isValid).length : 0;
+  const brokenLinkCount = data ? data.links.filter(l => l.isBroken).length : 0;
+
+  const getFileName = (url: string) => {
+    try {
+      const last = url.split('/').pop() || "image";
+      return last.split('?')[0].split('#')[0];
+    } catch { return "image"; }
+  };
+  const poorAltCount = data ? data.images.filter(img => {
+    const fn = getFileName(img.src).toLowerCase().split('.')[0];
+    return img.alt && (img.alt.toLowerCase().trim() === fn || img.alt.toLowerCase().trim() === getFileName(img.src).toLowerCase());
+  }).length : 0;
+  const imageIssueCount = missingAltCount + poorAltCount;
 
   const handleAnalyze = () => {
     analyze(urlInput);
@@ -160,7 +180,7 @@ const Index = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto scrollbar-none">
+          <div className="flex flex-wrap gap-1 mb-4 border-b border-border">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const hasHeadersIssue = tab.id === "headers" && headerIssueCount > 0;
@@ -180,9 +200,22 @@ const Index = () => {
                   {hasHeadersIssue && (
                     <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
                   )}
-                  {hasImagesIssue && (
+                  {hasImagesIssue && tab.id === "images" && (
                     <span className="bg-destructive text-white text-[8px] px-1 rounded-full min-w-[12px] h-3 flex items-center justify-center font-bold">
                       {missingAltCount}
+                    </span>
+                  )}
+                  {tab.id === "images-seo" && imageIssueCount > 0 && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
+                  )}
+                  {tab.id === "schema" && schemaErrorCount > 0 && (
+                    <span className="bg-destructive text-white text-[8px] px-1 rounded-full min-w-[12px] h-3 flex items-center justify-center font-bold">
+                      {schemaErrorCount}
+                    </span>
+                  )}
+                  {tab.id === "links" && brokenLinkCount > 0 && (
+                    <span className="bg-destructive text-white text-[8px] px-1 rounded-full min-w-[12px] h-3 flex items-center justify-center font-bold">
+                      {brokenLinkCount}
                     </span>
                   )}
                 </button>
@@ -195,10 +228,12 @@ const Index = () => {
             {activeTab === "summary" && <SummaryTab data={data} />}
             {activeTab === "headers" && <HeadersTab data={data} />}
             {activeTab === "images" && <ImagesTab data={data} />}
+            {activeTab === "images-seo" && <ImagesSEOTab images={data.images} />}
+            {activeTab === "links" && <LinksAuditTab links={data.links} />}
+            {activeTab === "schema" && <SchemaTab schemas={data.schemas} url={data.url} />}
             {activeTab === "devcheck" && <DevCheckTab data={data} />}
-            {activeTab === "fonts" && <FontsTab fonts={data.fonts} />}
             {activeTab === "social" && <SocialTab data={data} />}
-            {activeTab === "tools" && <ToolsTab />}
+            {activeTab === "tools" && <ToolsTab fonts={data.fonts} />}
           </div>
         </div>
       )}

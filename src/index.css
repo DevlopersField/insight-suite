@@ -67,10 +67,24 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    width: 600px;
+    min-width: 600px;
+    margin: 0;
   }
 
   code,
   .font-mono {
     font-family: var(--font-mono);
+  }
+}
+
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

@@ -60,12 +60,55 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
     const scanResult = injectionResults?.[0]?.result as DomScanResult | null;
     if (!scanResult) throw new Error("Content script did not return results");
 
-    // 4. Audit security headers (background has full fetch access)
-    const security = await auditSecurityHeaders(tabUrl);
+    // 4. Audit security headers (only for web pages)
+    const security = tabUrl.startsWith('http')
+        ? await auditSecurityHeaders(tabUrl)
+        : [];
 
-    // 5. Merge into final AuditData
+    // 5. Audit link status (background can bypass CORS)
+    // We only check the first 50 links to avoid excessive resource usage
+    const links = [...scanResult.links];
+    const uniqueLinks = Array.from(new Set(links.map(l => l.href)))
+        .filter(url => url && typeof url === 'string' && url.toLowerCase().startsWith('http'))
+        .slice(0, 50);
+
+    const linkStatuses = await Promise.all(
+        uniqueLinks.map(async (url) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                const res = await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors', // We try to get whatever we can
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                return { url, status: res.status, statusText: res.statusText };
+            } catch (e) {
+                return { url, status: 0, statusText: "Error/Timeout" };
+            }
+        })
+    );
+
+    // Map statuses back to links
+    const statusMap = new Map(linkStatuses.map(s => [s.url, s]));
+    const enrichedLinks = links.map(link => {
+        const stats = statusMap.get(link.href);
+        if (stats) {
+            return {
+                ...link,
+                status: stats.status,
+                statusText: stats.statusText,
+                isBroken: stats.status >= 400 || stats.status === 0
+            };
+        }
+        return link;
+    });
+
+    // 6. Merge into final AuditData
     const auditData: AuditData = {
         ...scanResult,
+        links: enrichedLinks,
         security,
     };
 
@@ -195,6 +238,32 @@ function injectedContentScan(): DomScanResult {
         twitterImage: getMeta("name", "twitter:image"),
         twitterSite: getMeta("name", "twitter:site"),
     };
+
+    const schemas = Array.from(document.querySelectorAll('script[type="application/ld+json"]')).flatMap(script => {
+        try {
+            const json = JSON.parse(script.textContent || "");
+            const items = (Array.isArray(json) ? json : [json]).flatMap(root => {
+                if (root["@graph"] && Array.isArray(root["@graph"])) {
+                    return root["@graph"];
+                }
+                return [root];
+            });
+            return items.map(item => {
+                const type = item["@type"] || "unknown";
+                const errors: string[] = [];
+                const warnings: string[] = [];
+                if ((type === "Article" || type === "NewsArticle" || type === "BlogPosting") && !item.headline) errors.push("Missing headline");
+                if (type === "Product" && !item.name) errors.push("Missing name");
+                return {
+                    type: Array.isArray(type) ? type.join(", ") : type,
+                    data: item,
+                    isValid: errors.length === 0,
+                    errors,
+                    warnings
+                };
+            });
+        } catch { return []; }
+    });
 
     // ─── Inline: Tech Detector ───────────────────────────────────
 
@@ -355,6 +424,6 @@ function injectedContentScan(): DomScanResult {
         description, descriptionLength: description.length,
         canonical, robots, author, language, charset, viewport,
         headers, images, links, social,
-        tech, fonts, videos,
+        tech, fonts, videos, schemas,
     };
 }

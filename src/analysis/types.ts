@@ -32,6 +32,15 @@ export interface VideoData {
   hasSchema: boolean;
 }
 
+// ─── Schema Markup ───────────────────────────────────────────────────
+export interface SchemaInfo {
+  type: string;
+  data: any;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 // ─── Social / OG Tags ───────────────────────────────────────────────
 export interface SocialData {
   ogTitle: string;
@@ -69,6 +78,9 @@ export interface LinkInfo {
   text: string;
   rel: string;
   isExternal: boolean;
+  status?: number;
+  statusText?: string;
+  isBroken?: boolean;
 }
 
 // ─── Full Audit Data (returned by the analysis engine) ───────────────
@@ -92,6 +104,7 @@ export interface AuditData {
   security: SecurityHeaderResult[];
   fonts: FontInfo[];
   videos: VideoData[];
+  schemas: SchemaInfo[];
 }
 
 // ─── DOM Scan Result (subset returned by content script) ─────────────
@@ -114,6 +127,7 @@ export interface DomScanResult {
   tech: TechInfo[];
   fonts: FontInfo[];
   videos: VideoData[];
+  schemas: SchemaInfo[];
 }
 
 // ─── Chrome Extension Messaging ──────────────────────────────────────
