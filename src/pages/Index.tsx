@@ -93,7 +93,7 @@ const Index = () => {
   const isFullView = new URLSearchParams(window.location.search).has("tabId");
 
   return (
-    <div className={`min-h-screen bg-background ${!isFullView && isExtension ? 'extension-popup' : ''}`}>
+    <div className={`min-h-screen bg-background ${!isFullView && isExtension ? 'extension-popup' : ''} ${isFullView ? 'is-full-view' : ''}`}>
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className={`${isFullView ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-2.5`}>
@@ -103,7 +103,7 @@ const Index = () => {
                 <Shield className="w-3.5 h-3.5 text-primary" />
               </div>
               <div className="shrink-0">
-                <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">Dev Buddy</h1>
+                <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">AuditLens</h1>
                 <p className="text-[10px] text-muted-foreground leading-none">Professional Audit Companion</p>
               </div>
             </div>

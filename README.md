@@ -1,8 +1,8 @@
-# Dev Buddy 🚀
+# AuditLens 🚀
 
-**Dev Buddy** is a professional-grade SEO and technical audit tool designed for developers and SEO specialists. It provides instant insights into on-page SEO, technical health, performance assets, and security configurations.
+**AuditLens** is a professional-grade SEO and technical audit tool designed for developers and SEO specialists. It provides instant insights into on-page SEO, technical health, performance assets, and security configurations.
 
-![Dev Buddy Header](https://placehold.co/1200x400/0d1b3e/ffffff?text=Dev+Buddy+Technical+Audit+Suite)
+![AuditLens Header](https://placehold.co/1200x400/0d1b3e/ffffff?text=Dev+Buddy+Technical+Audit+Suite)
 
 ## ✨ Key Features
 

@@ -1,8 +1,8 @@
-# Dev Buddy - Technical Documentation
+# AuditLens - Technical Documentation
 
 ## Architecture Overview
 
-**Dev Buddy** is built as a hybrid React application that can function both as a standalone web app and a Chrome Extension.
+**AuditLens** is built as a hybrid React application that can function both as a standalone web app and a Chrome Extension.
 
 ### Core Components
 

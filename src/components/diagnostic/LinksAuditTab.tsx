@@ -79,7 +79,7 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                         )}
                     </div>
 
-                    <ScrollArea className="h-[300px] pr-1">
+                    <ScrollArea className={`${new URLSearchParams(window.location.search).has("tabId") ? 'h-[600px]' : 'h-[300px]'} pr-1`}>
                         <div className="flex flex-col gap-2 pb-2 mr-2">
                             {visibleLinks.length === 0 ? (
                                 <div className="text-[11px] text-muted-foreground italic p-6 bg-card rounded border border-dashed border-border text-center">

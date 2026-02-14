@@ -90,4 +90,114 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Full View Mode Global Scaling */
+  .is-full-view {
+    font-size: 16px;
+  }
+
+  .is-full-view .text-\[8px\],
+  .is-full-view .text-\[7px\] {
+    font-size: 10px !important;
+  }
+
+  .is-full-view .text-\[9px\] {
+    font-size: 11px !important;
+  }
+
+  .is-full-view .text-\[10px\] {
+    font-size: 13px !important;
+  }
+
+  .is-full-view .text-\[11px\] {
+    font-size: 15px !important;
+  }
+
+  .is-full-view .text-xs {
+    font-size: 0.95rem !important;
+  }
+
+  .is-full-view .text-sm {
+    font-size: 1.1rem !important;
+  }
+
+  .is-full-view .text-lg {
+    font-size: 1.25rem !important;
+  }
+
+  .is-full-view .text-xl {
+    font-size: 1.5rem !important;
+  }
+
+  .is-full-view .text-2xl {
+    font-size: 2.25rem !important;
+  }
+
+  .is-full-view .p-1 {
+    padding: 0.5rem !important;
+  }
+
+  .is-full-view .p-2 {
+    padding: 0.75rem !important;
+  }
+
+  .is-full-view .p-2\.5 {
+    padding: 0.875rem !important;
+  }
+
+  .is-full-view .p-3 {
+    padding: 1.15rem !important;
+  }
+
+  .is-full-view .p-4 {
+    padding: 1.5rem !important;
+  }
+
+  .is-full-view .gap-1.5 {
+    gap: 0.5rem !important;
+  }
+
+  .is-full-view .gap-2 {
+    gap: 0.75rem !important;
+  }
+
+  .is-full-view .gap-3 {
+    gap: 1.15rem !important;
+  }
+
+  /* Icon Scaling */
+  .is-full-view .w-2\.5.h-2\.5 {
+    width: 0.85rem !important;
+    height: 0.85rem !important;
+  }
+
+  .is-full-view .w-3.h-3 {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
+  .is-full-view .w-3\.5.h-3\.5 {
+    width: 1.15rem !important;
+    height: 1.15rem !important;
+  }
+
+  .is-full-view .w-4.h-4 {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+
+  .is-full-view .w-5.h-5 {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+  }
+
+  .is-full-view .w-6.h-6 {
+    width: 2rem !important;
+    height: 2rem !important;
+  }
+
+  .is-full-view .w-7.h-7 {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
 }

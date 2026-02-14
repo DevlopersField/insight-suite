@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Dev Buddy",
+    "name": "AuditLens",
     "version": "1.0.0",
     "description": "Professional SEO & Technical audit companion for developers.",
     "permissions": [
