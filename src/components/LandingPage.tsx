@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Shield, Search, Globe, Code2, Type, Share2, Wrench, ChevronRight, Layout, Zap, CheckCircle2, ArrowRight, Download, FileText, ExternalLink, Terminal } from "lucide-react";
 
 interface LandingPageProps {
@@ -214,14 +215,14 @@ export const LandingPage = ({ onAnalyze, onAnalyzeHTML, urlInput, setUrlInput, i
           </div>
 
           <div className="flex gap-8 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-primary transition-colors">Documentation</a>
-            <a href="#" className="hover:text-primary transition-colors">Support</a>
+            <Link to="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+            <Link to="/support" className="hover:text-primary transition-colors">Support</Link>
+            <a href="https://github.com/DevlopersField/insight-suite" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Documentation</a>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Insight Suite. All rights reserved.
+            &copy; {new Date().getFullYear()} AuditLens. All rights reserved.
           </p>
         </div>
       </footer>
