@@ -105,9 +105,66 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
         return link;
     });
 
-    // 6. Merge into final AuditData
+    // 6. Audit image sizes (background can bypass CORS)
+    const images = [...scanResult.images];
+    const uniqueImageUrls = Array.from(new Set(images.map(img => img.src)))
+        .filter(src => src && typeof src === 'string' && src.toLowerCase().startsWith('http'))
+        .slice(0, 50); // Limit to top 50 images to avoid performance issues
+
+    const imageSizes = await Promise.all(
+        uniqueImageUrls.map(async (url) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+                // Try HEAD first
+                let res = await fetch(url, {
+                    method: 'HEAD',
+                    signal: controller.signal
+                });
+
+                let size = res.headers.get('content-length');
+
+                // If HEAD fails or has no size, try GET with a tiny range or just regular GET
+                if (!size || parseInt(size) === 0) {
+                    res = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'Range': 'bytes=0-1' }, // Support range if server allows
+                        signal: controller.signal
+                    });
+                    size = res.headers.get('content-length');
+
+                    // If range failed or we got the whole thing, check content-range or length
+                    const contentRange = res.headers.get('content-range');
+                    if (contentRange) {
+                        const match = contentRange.match(/\/(\d+)$/);
+                        if (match) size = match[1];
+                    }
+                }
+
+                clearTimeout(timeoutId);
+                return { url, size: size ? parseInt(size, 10) : undefined };
+            } catch (e) {
+                return { url, size: undefined };
+            }
+        })
+    );
+
+    const imageSizeMap = new Map(imageSizes.map(s => [s.url, s.size]));
+    const enrichedImages = images.map(img => {
+        let size = img.size;
+        if (img.src.startsWith('data:')) {
+            size = Math.round((img.src.length - img.src.indexOf(',') - 1) * 0.75);
+        } else if (!size) {
+            size = imageSizeMap.get(img.src);
+        }
+        return { ...img, size };
+    });
+
+    // 7. Merge into final AuditData
     const auditData: AuditData = {
         ...scanResult,
+        images: enrichedImages,
         links: enrichedLinks,
         security,
     };
@@ -145,6 +202,18 @@ function injectedContentScan(): DomScanResult {
 
     const images = Array.from((document.body || document).querySelectorAll("img")).map((img) => {
         const src = img.src || img.getAttribute("data-src") || "";
+        let size: number | undefined;
+
+        // Try Performance API for sizes (if TAO is set or same-origin)
+        try {
+            const entry = performance.getEntriesByName(src)[0] as PerformanceResourceTiming;
+            if (entry && entry.encodedBodySize > 0) {
+                size = entry.encodedBodySize;
+            } else if (entry && entry.transferSize > 0) {
+                size = entry.transferSize;
+            }
+        } catch { }
+
         let type = "unknown";
         try {
             const activeSrc = img.currentSrc || src;
@@ -196,7 +265,8 @@ function injectedContentScan(): DomScanResult {
             title: img.title ?? "",
             width: img.naturalWidth || img.width || 0,
             height: img.naturalHeight || img.height || 0,
-            type
+            type,
+            size
         };
     });
 

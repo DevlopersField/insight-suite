@@ -70,6 +70,7 @@ export interface ImageInfo {
   width: number;
   height: number;
   type: string;
+  size?: number;
 }
 
 // ─── Link Info ───────────────────────────────────────────────────────

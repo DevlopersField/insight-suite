@@ -1,22 +1,67 @@
+import React, { useState, useMemo } from "react";
 import type { AuditData } from "@/analysis/types";
 import { StatusBadge } from "./StatusBadge";
-import { ImageIcon, Youtube, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ImageIcon, Youtube, AlertCircle, CheckCircle2, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
     data: AuditData;
 }
 
+type SortConfig = {
+    key: 'alt' | 'type' | 'size';
+    direction: 'asc' | 'desc';
+} | null;
+
 export const ImagesTab = ({ data }: Props) => {
-    const images = [...data.images].sort((a, b) => {
-        if (!a.alt && b.alt) return -1;
-        if (a.alt && !b.alt) return 1;
-        return 0;
-    });
+    const [sortConfig, setSortConfig] = useState<SortConfig>(null);
+
+    const handleSort = (key: 'alt' | 'type' | 'size') => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const sortedImages = useMemo(() => {
+        const items = [...data.images];
+        if (sortConfig) {
+            items.sort((a, b) => {
+                if (sortConfig.key === 'size') {
+                    const sizeA = a.size || 0;
+                    const sizeB = b.size || 0;
+                    return sortConfig.direction === 'asc' ? sizeA - sizeB : sizeB - sizeA;
+                }
+                const valA = (a[sortConfig.key] || "").toLowerCase();
+                const valB = (b[sortConfig.key] || "").toLowerCase();
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            // Default sort: missing alt first
+            items.sort((a, b) => {
+                if (!a.alt && b.alt) return -1;
+                if (a.alt && !b.alt) return 1;
+                return 0;
+            });
+        }
+        return items;
+    }, [data.images, sortConfig]);
+
     const videos = data.videos;
 
-    const imagesWithAlt = images.filter((img) => img.alt.trim()).length;
-    const imagesMissingAlt = images.length - imagesWithAlt;
+    const imagesWithAlt = data.images.filter((img) => img.alt.trim()).length;
+    const imagesMissingAlt = data.images.length - imagesWithAlt;
+
+    const formatSize = (bytes?: number) => {
+        if (bytes === undefined) return "Unknown";
+        if (bytes < 1024) return `${bytes} B`;
+        const kb = bytes / 1024;
+        if (kb < 1024) return `${kb.toFixed(1)} KB`;
+        return `${(kb / 1024).toFixed(1)} MB`;
+    };
 
     return (
         <div className="space-y-6">
@@ -25,7 +70,7 @@ export const ImagesTab = ({ data }: Props) => {
                 <div className="bg-card rounded border border-border p-3">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Images Audit</div>
                     <div className="flex items-end gap-1.5">
-                        <span className="text-xl font-bold text-foreground leading-none">{images.length}</span>
+                        <span className="text-xl font-bold text-foreground leading-none">{data.images.length}</span>
                         <span className="text-[10px] text-muted-foreground mb-0.5">Total Assets</span>
                     </div>
                     <div className="mt-2 flex gap-1.5 flex-wrap">
@@ -109,14 +154,38 @@ export const ImagesTab = ({ data }: Props) => {
                         <thead className="bg-muted/50 text-muted-foreground uppercase tracking-wider">
                             <tr>
                                 <th className="px-4 py-2 font-medium">Preview</th>
-                                <th className="px-4 py-2 font-medium">Alt Text</th>
-                                <th className="px-4 py-2 font-medium">Type</th>
-                                <th className="px-4 py-2 font-medium">Resolution</th>
+                                <th
+                                    className="px-4 py-2 font-medium cursor-pointer hover:text-foreground transition-colors group"
+                                    onClick={() => handleSort('alt')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Alt Text
+                                        <ArrowUpDown className={cn("w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity", sortConfig?.key === 'alt' && "opacity-100 text-primary")} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2 font-medium cursor-pointer hover:text-foreground transition-colors group"
+                                    onClick={() => handleSort('type')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Type
+                                        <ArrowUpDown className={cn("w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity", sortConfig?.key === 'type' && "opacity-100 text-primary")} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2 font-medium cursor-pointer hover:text-foreground transition-colors group"
+                                    onClick={() => handleSort('size')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Size
+                                        <ArrowUpDown className={cn("w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity", sortConfig?.key === 'size' && "opacity-100 text-primary")} />
+                                    </div>
+                                </th>
                                 <th className="px-4 py-2 font-medium">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {images.map((img, idx) => (
+                            {sortedImages.map((img, idx) => (
                                 <tr key={idx} className={cn("hover:bg-muted/30 transition-colors", !img.alt && "bg-destructive/5")}>
                                     <td className="px-4 py-3">
                                         <div className="h-10 w-16 bg-muted rounded border border-border overflow-hidden group">
@@ -150,14 +219,14 @@ export const ImagesTab = ({ data }: Props) => {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground font-mono">
-                                        {img.width > 0 ? `${img.width}x${img.height}px` : "Unknown"}
+                                        {formatSize(img.size)}
                                     </td>
                                     <td className="px-4 py-3">
                                         <StatusBadge status={img.alt ? "pass" : "fail"} label={img.alt ? "OK" : "Crit"} />
                                     </td>
                                 </tr>
                             ))}
-                            {images.length === 0 && (
+                            {sortedImages.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground italic">
                                         No images found on this page

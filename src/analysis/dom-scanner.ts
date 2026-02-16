@@ -50,8 +50,19 @@ export function scanImages(): ImageInfo[] {
     const imgs = document.body ? document.body.querySelectorAll("img") : document.querySelectorAll("img");
     return Array.from(imgs).map((img) => {
         const src = img.src || img.getAttribute("data-src") || "";
-        let type = "unknown";
+        let size: number | undefined;
 
+        // Try Performance API for sizes (if TAO is set or same-origin)
+        try {
+            const entry = performance.getEntriesByName(src)[0] as PerformanceResourceTiming;
+            if (entry && entry.encodedBodySize > 0) {
+                size = entry.encodedBodySize;
+            } else if (entry && entry.transferSize > 0) {
+                size = entry.transferSize;
+            }
+        } catch { }
+
+        let type = "unknown";
         try {
             const activeSrc = img.currentSrc || src;
             if (!activeSrc) {
@@ -112,6 +123,7 @@ export function scanImages(): ImageInfo[] {
             width: img.naturalWidth || img.width || 0,
             height: img.naturalHeight || img.height || 0,
             type: type || "img",
+            size
         };
     });
 }
