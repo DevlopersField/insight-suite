@@ -194,12 +194,43 @@ export const LandingPage = ({ onAnalyze, onAnalyzeHTML, urlInput, setUrlInput, i
                 </a>
               </div>
             </div>
-            <div className="hidden md:block">
-              <div className="aspect-video bg-black/20 rounded-2xl border border-white/10 backdrop-blur-xl flex items-center justify-center shadow-inner group transition-transform hover:scale-105">
-                <div className="text-center p-8">
-                  <Layout className="w-20 h-20 mx-auto text-white/20 mb-4" />
-                  <p className="text-white/40 text-sm font-medium">Interactive Demo Interface</p>
+            <div className="hidden lg:block relative group">
+              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 to-purple-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+              <div className="relative aspect-[16/10] bg-black/40 rounded-3xl border border-white/10 backdrop-blur-2xl shadow-2xl overflow-hidden group-hover:scale-[1.02] transition-transform duration-500">
+                {/* Mock Browser Header */}
+                <div className="h-8 border-b border-white/5 bg-white/5 flex items-center px-4 gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                  <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
+                  <div className="w-2 h-2 rounded-full bg-green-500/50" />
                 </div>
+
+                {/* Mock Dashboard Layout */}
+                <div className="p-6 h-full">
+                  <div className="flex gap-4 h-full">
+                    {/* Mock Sidebar */}
+                    <div className="w-16 space-y-4">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="w-full aspect-square rounded-xl bg-white/5 animate-pulse" style={{ animationDelay: `${i * 150}ms` }} />
+                      ))}
+                    </div>
+                    {/* Mock Content */}
+                    <div className="flex-1 space-y-6">
+                      <div className="h-4 w-32 rounded bg-white/10" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="h-24 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent border border-white/10" />
+                        <div className="h-24 rounded-2xl bg-white/5 border border-white/5" />
+                      </div>
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="h-3 w-full rounded bg-white/5" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Glassy Overlay for "Attractive" Feel */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-purple-500/10 pointer-events-none" />
               </div>
             </div>
           </div>
