@@ -18,7 +18,7 @@ export const MetricCard = ({ label, value, sublabel, status, mono = false }: Met
 
   return (
     <div className={cn(
-      "bg-card rounded border border-border p-3 border-l-2",
+      "bg-card rounded border border-border p-3 border-l-2 transition-all hover:bg-muted/10",
       status ? statusColor[status] : "border-l-muted-foreground/30"
     )}>
       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{label}</p>

@@ -65,54 +65,107 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
         ? await auditSecurityHeaders(tabUrl)
         : [];
 
-    // 5. Audit link status (background can bypass CORS)
-    // We only check the first 50 links to avoid excessive resource usage
-    const links = [...scanResult.links];
-    const uniqueLinks = Array.from(new Set(links.map(l => l.href)))
-        .filter(url => url && typeof url === 'string' && url.toLowerCase().startsWith('http'))
-        .slice(0, 50);
-
-    const linkStatuses = await Promise.all(
-        uniqueLinks.map(async (url) => {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                const res = await fetch(url, {
-                    method: 'HEAD',
-                    mode: 'no-cors', // We try to get whatever we can
-                    signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-                return { url, status: res.status, statusText: res.statusText };
-            } catch (e) {
-                return { url, status: 0, statusText: "Error/Timeout" };
-            }
-        })
-    );
-
-    // Map statuses back to links
-    const statusMap = new Map(linkStatuses.map(s => [s.url, s]));
-    const enrichedLinks = links.map(link => {
-        const stats = statusMap.get(link.href);
-        if (stats) {
-            return {
-                ...link,
-                status: stats.status,
-                statusText: stats.statusText,
-                isBroken: stats.status >= 400 || stats.status === 0
-            };
-        }
-        return link;
-    });
-
-    // 6. Merge into final AuditData
+    // 5. Merge into initial AuditData (returned immediately)
     const auditData: AuditData = {
         ...scanResult,
-        links: enrichedLinks,
         security,
     };
 
+    // 6. Perform expensive audits in the background (Incremental Loading)
+    performAsyncAudits(tabId, scanResult);
+
     return auditData;
+}
+
+/**
+ * Performs audits that might take time (link status, image sizes)
+ * and streams updates back to the UI.
+ */
+async function performAsyncAudits(tabId: number, scanResult: DomScanResult) {
+    try {
+        // --- Link Status Check ---
+        const links = [...scanResult.links];
+        const uniqueLinks = Array.from(new Set(links.map(l => l.href)))
+            .filter(url => url && typeof url === 'string' && url.toLowerCase().startsWith('http'))
+            .slice(0, 50);
+
+        if (uniqueLinks.length > 0) {
+            const linkStatuses = await Promise.all(
+                uniqueLinks.map(async (url) => {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000);
+                        const res = await fetch(url, {
+                            method: 'HEAD',
+                            mode: 'no-cors',
+                            signal: controller.signal
+                        });
+                        clearTimeout(timeoutId);
+                        return { url, status: res.status, statusText: res.statusText };
+                    } catch (e) {
+                        return { url, status: 0, statusText: "Error/Timeout" };
+                    }
+                })
+            );
+
+            const statusMap = new Map(linkStatuses.map(s => [s.url, s]));
+            const enrichedLinks = links.map(link => {
+                const stats = statusMap.get(link.href);
+                if (stats) {
+                    return {
+                        ...link,
+                        status: stats.status,
+                        statusText: stats.statusText,
+                        isBroken: stats.status >= 400 || stats.status === 0
+                    };
+                }
+                return link;
+            });
+
+            // Send link updates
+            chrome.runtime.sendMessage({
+                type: "ANALYSIS_UPDATE",
+                data: { links: enrichedLinks }
+            });
+        }
+
+        // --- Image Size Check ---
+        const images = [...scanResult.images];
+        const uniqueImageUrls = Array.from(new Set(images.map(img => img.src)))
+            .filter(url => url && url.startsWith('http'))
+            .slice(0, 30);
+
+        if (uniqueImageUrls.length > 0) {
+            const imageSizes = await Promise.all(
+                uniqueImageUrls.map(async (url) => {
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000);
+                        const res = await fetch(url, { method: 'HEAD', signal: controller.signal });
+                        clearTimeout(timeoutId);
+                        const size = res.headers.get('content-length');
+                        return { url, size: size ? parseInt(size) : 0 };
+                    } catch {
+                        return { url, size: 0 };
+                    }
+                })
+            );
+
+            const sizeMap = new Map(imageSizes.map(s => [s.url, s.size]));
+            const enrichedImages = images.map(img => ({
+                ...img,
+                size: sizeMap.get(img.src) ?? img.size
+            }));
+
+            // Send image updates
+            chrome.runtime.sendMessage({
+                type: "ANALYSIS_UPDATE",
+                data: { images: enrichedImages }
+            });
+        }
+    } catch (err) {
+        console.error("Async audits failed:", err);
+    }
 }
 
 /**

@@ -24,9 +24,15 @@ export const ImagesTab = ({ data }: Props) => {
             <div className="grid grid-cols-2 gap-3">
                 <div className="bg-card rounded border border-border p-3">
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Images Audit</div>
-                    <div className="flex items-end gap-1.5">
-                        <span className="text-xl font-bold text-foreground leading-none">{images.length}</span>
-                        <span className="text-[10px] text-muted-foreground mb-0.5">Total Assets</span>
+                    <div className="flex items-center gap-2">
+                        <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
+                            Images & Media ({images.length})
+                            {images.some(img => img.size === undefined) && images.length > 0 && (
+                                <span className="text-[8px] text-primary animate-pulse font-medium lowercase tracking-tighter mt-0.5">
+                                    Auditing...
+                                </span>
+                            )}
+                        </h4>
                     </div>
                     <div className="mt-2 flex gap-1.5 flex-wrap">
                         <StatusBadge
@@ -148,6 +154,15 @@ export const ImagesTab = ({ data }: Props) => {
                                         )}>
                                             {img.type || "img"}
                                         </span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {img.size !== undefined ? (
+                                            <span className="text-muted-foreground font-mono">
+                                                {img.size > 0 ? `${(img.size / 1024).toFixed(1)} KB` : "Small"}
+                                            </span>
+                                        ) : (
+                                            <div className="w-12 h-3 bg-muted rounded animate-pulse" />
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground font-mono">
                                         {img.width > 0 ? `${img.width}x${img.height}px` : "Unknown"}

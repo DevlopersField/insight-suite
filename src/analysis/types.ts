@@ -70,6 +70,7 @@ export interface ImageInfo {
   width: number;
   height: number;
   type: string;
+  size?: number;
 }
 
 // ─── Link Info ───────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ export interface DomScanResult {
 }
 
 // ─── Chrome Extension Messaging ──────────────────────────────────────
-export type MessageType = "ANALYZE_PAGE" | "ANALYSIS_RESULT" | "ANALYSIS_ERROR";
+export type MessageType = "ANALYZE_PAGE" | "ANALYSIS_RESULT" | "ANALYSIS_ERROR" | "ANALYSIS_UPDATE";
 
 export interface AnalyzePageMessage {
   type: "ANALYZE_PAGE";
@@ -148,7 +149,13 @@ export interface AnalysisErrorMessage {
   error: string;
 }
 
+export interface AnalysisUpdateMessage {
+  type: "ANALYSIS_UPDATE";
+  data: Partial<AuditData>;
+}
+
 export type ExtensionMessage =
   | AnalyzePageMessage
   | AnalysisResultMessage
-  | AnalysisErrorMessage;
+  | AnalysisErrorMessage
+  | AnalysisUpdateMessage;

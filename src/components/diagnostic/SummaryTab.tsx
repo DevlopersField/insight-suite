@@ -15,7 +15,7 @@ export const SummaryTab = ({ data }: Props) => {
   return (
     <div className="space-y-4">
       {/* Title */}
-      <div className="bg-card rounded border border-border p-4">
+      <div className="bg-card rounded border border-border p-4 transition-all hover:bg-muted/5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Page Title</span>
           <StatusBadge status={titleStatus} label={`${data.titleLength} chars`} />
@@ -31,7 +31,7 @@ export const SummaryTab = ({ data }: Props) => {
       </div>
 
       {/* Description */}
-      <div className="bg-card rounded border border-border p-4">
+      <div className="bg-card rounded border border-border p-4 transition-all hover:bg-muted/5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Meta Description</span>
           <StatusBadge status={descStatus} label={`${data.descriptionLength} chars`} />
@@ -58,16 +58,16 @@ export const SummaryTab = ({ data }: Props) => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card rounded border border-border p-3 text-center">
-          <p className="text-2xl font-mono font-bold text-foreground">{data.headers.length}</p>
+        <div className="bg-card rounded border border-border p-3 text-center transition-all hover:bg-muted/10 group">
+          <p className="text-2xl font-mono font-bold text-foreground group-hover:text-primary transition-colors">{data.headers.length}</p>
           <p className="text-xs text-muted-foreground">Headers</p>
         </div>
-        <div className="bg-card rounded border border-border p-3 text-center">
-          <p className="text-2xl font-mono font-bold text-foreground">{data.images.length}</p>
+        <div className="bg-card rounded border border-border p-3 text-center transition-all hover:bg-muted/10 group">
+          <p className="text-2xl font-mono font-bold text-foreground group-hover:text-primary transition-colors">{data.images.length}</p>
           <p className="text-xs text-muted-foreground">Images</p>
         </div>
-        <div className="bg-card rounded border border-border p-3 text-center">
-          <p className="text-2xl font-mono font-bold text-foreground">{data.links.length}</p>
+        <div className="bg-card rounded border border-border p-3 text-center transition-all hover:bg-muted/10 group">
+          <p className="text-2xl font-mono font-bold text-foreground group-hover:text-primary transition-colors">{data.links.length}</p>
           <p className="text-xs text-muted-foreground">Links</p>
         </div>
       </div>

@@ -13,6 +13,7 @@ import { ImagesSEOTab } from "@/components/diagnostic/ImagesSEOTab";
 import { LinksAuditTab } from "@/components/diagnostic/LinksAuditTab";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LandingPage } from "@/components/LandingPage";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const tabs = [
   { id: "summary", label: "Summary", icon: FileText },
@@ -123,8 +124,8 @@ const Index = () => {
         <div className={`${isFullView || isWebMode ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-2.5`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 group cursor-pointer" onClick={() => isWebMode && setHasStartedAudit(false)}>
-              <div className="w-7 h-7 rounded bg-primary/15 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                <Shield className="w-3.5 h-3.5 text-primary" />
+              <div className="w-8 h-8 rounded bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors p-1.5">
+                <img src="/icons/icon.svg" alt="AuditLens Logo" className="w-full h-full object-contain" />
               </div>
               <div className="shrink-0">
                 <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">AuditLens</h1>
@@ -170,17 +171,20 @@ const Index = () => {
                   Install Extension
                 </button>
               )}
-              {isExtension && !isFullView && (
-                <button
-                  onClick={handleOpenFullView}
-                  title="Open in Full View"
-                  className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card hover:border-primary/50 text-muted-foreground hover:text-primary transition-all"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <div className="text-[10px] font-mono whitespace-nowrap hidden sm:block opacity-60">
-                <span className="opacity-40">v</span>1.0.0
+              <div className="flex items-center gap-1.5 border-l border-border pl-2">
+                <ThemeToggle />
+                {isExtension && !isFullView && (
+                  <button
+                    onClick={handleOpenFullView}
+                    title="Open in Full View"
+                    className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card hover:border-primary/50 text-muted-foreground hover:text-primary transition-all"
+                  >
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="text-[10px] font-mono whitespace-nowrap hidden sm:block opacity-40">
+                v1.0.3
               </div>
             </div>
           </div>
@@ -336,8 +340,8 @@ const Index = () => {
       {/* Initial State */}
       {!data && !isLoading && !error && isExtension && !isFullView && (
         <div className="max-w-5xl mx-auto px-4 py-16 flex flex-col items-center gap-6 text-center animate-in fade-in duration-1000">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
-            <Shield className="w-10 h-10 text-primary" />
+          <div className="w-24 h-24 rounded-2xl bg-primary/5 flex items-center justify-center shadow-inner p-4">
+            <img src="/icons/icon.svg" alt="AuditLens Logo" className="w-full h-full object-contain" />
           </div>
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-foreground">Analyze Any Website</h2>

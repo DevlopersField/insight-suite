@@ -4,6 +4,7 @@ import { ExternalLink, Link2, Share2, CheckCircle2, Globe, Lock } from "lucide-r
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface LinksAuditTabProps {
     links: LinkInfo[];
@@ -68,6 +69,11 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                             {activeFilter === "all" ? "All Scanned Links" :
                                 activeFilter === "internal" ? "Internal Links" :
                                     activeFilter === "external" ? "External Links" : "No-Follow & Managed Links"} ({visibleLinks.length})
+                            {links.some(l => l.status === undefined) && (
+                                <span className="ml-2 text-[8px] text-primary animate-pulse font-medium lowercase tracking-tighter self-center mt-0.5">
+                                    Auditing...
+                                </span>
+                            )}
                         </h4>
                         {activeFilter !== "all" && (
                             <button
@@ -87,7 +93,7 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                                 </div>
                             ) : (
                                 visibleLinks.map((link, i) => (
-                                    <div key={i} className="bg-card border border-border rounded p-2.5 flex items-start justify-between gap-3 group hover:border-primary/40 transition-all overflow-hidden w-full">
+                                    <div key={i} className="bg-card border border-border rounded p-2.5 flex items-start justify-between gap-3 group hover:border-primary/40 hover:bg-muted/10 transition-all overflow-hidden w-full">
                                         <div className="min-w-0 flex-1">
                                             <div className="text-[11px] font-medium text-foreground truncate flex items-center gap-1.5">
                                                 {link.isExternal ? <Globe className="w-2.5 h-2.5 text-info/70 shrink-0" /> : <Lock className="w-2.5 h-2.5 text-primary/70 shrink-0" />}
@@ -97,15 +103,30 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                                                 {link.href}
                                             </div>
                                         </div>
-                                        {link.rel && (
-                                            <div className="flex flex-wrap justify-end gap-1 shrink-0 max-w-[120px]">
-                                                {link.rel.split(' ').filter(Boolean).map((r, ri) => (
-                                                    <Badge key={ri} variant="outline" className="text-[7px] h-3.5 px-1 font-bold border-primary/20 text-primary/70 uppercase leading-none bg-primary/5">
-                                                        {r}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            {link.status !== undefined ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "text-[8px] h-4 font-mono",
+                                                        link.isBroken ? "text-destructive border-destructive/20 bg-destructive/5" : "text-success border-success/20 bg-success/5"
+                                                    )}
+                                                >
+                                                    {link.status || "ERR"}
+                                                </Badge>
+                                            ) : (
+                                                <div className="w-8 h-4 bg-muted rounded animate-pulse" />
+                                            )}
+                                            {link.rel && (
+                                                <div className="flex flex-wrap justify-end gap-1 max-w-[120px]">
+                                                    {link.rel.split(' ').filter(Boolean).map((r, ri) => (
+                                                        <Badge key={ri} variant="outline" className="text-[7px] h-3.5 px-1 font-bold border-primary/20 text-primary/70 uppercase leading-none bg-primary/5">
+                                                            {r}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             )}
