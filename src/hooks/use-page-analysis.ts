@@ -41,6 +41,15 @@ export function usePageAnalysis(): UsePageAnalysisReturn {
                     if (tab?.url) setCurrentUrl(tab.url);
                 });
             }
+
+            // Listen for incremental updates from background
+            const handler = (msg: any) => {
+                if (msg.type === "ANALYSIS_UPDATE") {
+                    setData(prev => prev ? { ...prev, ...msg.data } : null);
+                }
+            };
+            chrome.runtime.onMessage.addListener(handler);
+            return () => chrome.runtime.onMessage.removeListener(handler);
         }
     }, [isExtension, paramUrl]);
 

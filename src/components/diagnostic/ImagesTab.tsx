@@ -73,13 +73,19 @@ export const ImagesTab = ({ data }: Props) => {
                         <span className="text-xl font-bold text-foreground leading-none">{data.images.length}</span>
                         <span className="text-[10px] text-muted-foreground mb-0.5">Total Assets</span>
                     </div>
-                    <div className="mt-2 flex gap-1.5 flex-wrap">
+                    <div className="mt-2 flex gap-1.5 flex-wrap items-center">
                         <StatusBadge
                             status={imagesMissingAlt === 0 ? "pass" : "fail"}
                             label={`${imagesWithAlt} Alt OK`}
                         />
                         {imagesMissingAlt > 0 && (
                             <StatusBadge status="fail" label={`${imagesMissingAlt} Missing Alt`} />
+                        )}
+                        {data.images.some(img => img.size === undefined) && (
+                            <span className="text-[9px] text-info animate-pulse flex items-center gap-1 font-medium bg-info/5 px-2 py-0.5 rounded border border-info/20">
+                                <span className="w-1.5 h-1.5 bg-info rounded-full" />
+                                Auditing sizes...
+                            </span>
                         )}
                     </div>
                 </div>
@@ -219,7 +225,9 @@ export const ImagesTab = ({ data }: Props) => {
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-muted-foreground font-mono">
-                                        {formatSize(img.size)}
+                                        {img.size === undefined ? (
+                                            <span className="text-[10px] animate-pulse text-muted-foreground/60 italic">Scanning...</span>
+                                        ) : formatSize(img.size)}
                                     </td>
                                     <td className="px-4 py-3">
                                         <StatusBadge status={img.alt ? "pass" : "fail"} label={img.alt ? "OK" : "Crit"} />

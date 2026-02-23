@@ -14,60 +14,90 @@ import type { AuditData, DomScanResult } from "../analysis/types";
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === "ANALYZE_PAGE") {
-        handleAnalyzePage(message.tabId)
-            .then((data) => sendResponse({ type: "ANALYSIS_RESULT", data }))
-            .catch((err) =>
-                sendResponse({
-                    type: "ANALYSIS_ERROR",
-                    error: err instanceof Error ? err.message : "Analysis failed",
-                })
-            );
+        handleIncrementalAnalysis(message.tabId, sendResponse);
         return true; // Keep the message channel open for async response
     }
 });
 
-async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
-    // 1. Get the active tab
-    let tabId = requestedTabId;
-    let tabUrl = "";
+async function handleIncrementalAnalysis(requestedTabId: number | undefined, sendResponse: (r: any) => void) {
+    try {
+        // 1. Get the active tab and basic info
+        let tabId = requestedTabId;
+        let tabUrl = "";
 
-    if (!tabId) {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (!tab?.id || !tab?.url) throw new Error("No active tab found");
-        tabId = tab.id;
-        tabUrl = tab.url;
-    } else {
-        const tab = await chrome.tabs.get(tabId);
-        tabUrl = tab.url ?? "";
+        if (!tabId) {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.id || !tab?.url) throw new Error("No active tab found");
+            tabId = tab.id;
+            tabUrl = tab.url;
+        } else {
+            const tab = await chrome.tabs.get(tabId);
+            tabUrl = tab.url ?? "";
+        }
+
+        // 2. Validate URL
+        if (tabUrl.startsWith("chrome://") || tabUrl.startsWith("chrome-extension://") || tabUrl.startsWith("about:")) {
+            throw new Error("Cannot analyze browser internal pages.");
+        }
+
+        // 3. Fast DOM Scan + Tech Detection
+        const injectionResults = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: injectedContentScan,
+            world: "MAIN",
+        });
+
+        const scanResult = injectionResults?.[0]?.result as DomScanResult | null;
+        if (!scanResult) throw new Error("Content script did not return results");
+
+        // 4. Fast Security Audit
+        const security = tabUrl.startsWith('http') ? await auditSecurityHeaders(tabUrl) : [];
+
+        // 5. Return CORE results immediately for fast initial view (Summary Tab)
+        const coreData: AuditData = {
+            ...scanResult,
+            security,
+            isPartial: true
+        };
+        sendResponse({ type: "ANALYSIS_RESULT", data: coreData });
+
+        // 6. Proceed with SLOW audits in background and broadcast updates
+        performDetailedAudits(tabId, tabUrl, scanResult);
+
+    } catch (err) {
+        sendResponse({
+            type: "ANALYSIS_ERROR",
+            error: err instanceof Error ? err.message : "Analysis failed",
+        });
     }
+}
 
-    // 2. Validate URL (can't scan chrome:// or extension pages)
-    if (
-        tabUrl.startsWith("chrome://") ||
-        tabUrl.startsWith("chrome-extension://") ||
-        tabUrl.startsWith("about:")
-    ) {
-        throw new Error("Cannot analyze browser internal pages. Navigate to a website first.");
+async function performDetailedAudits(tabId: number, tabUrl: string, scanResult: DomScanResult) {
+    try {
+        // Run Link and Image audits in parallel
+        const [enrichedLinks, enrichedImages] = await Promise.all([
+            auditLinksInBackground(scanResult.links),
+            auditImagesInBackground(scanResult.images)
+        ]);
+
+        // Broadcast update to anyone listening (popup, etc.)
+        chrome.runtime.sendMessage({
+            type: "ANALYSIS_UPDATE",
+            tabId,
+            data: {
+                links: enrichedLinks,
+                images: enrichedImages,
+                isPartial: false
+            }
+        }).catch(() => {
+            // Popup might be closed, ignore
+        });
+    } catch (err) {
+        console.error("Delayed audits failed:", err);
     }
+}
 
-    // 3. Inject and execute the content script
-    const injectionResults = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: injectedContentScan,
-        world: "MAIN", // Access window globals (for tech detection)
-    });
-
-    const scanResult = injectionResults?.[0]?.result as DomScanResult | null;
-    if (!scanResult) throw new Error("Content script did not return results");
-
-    // 4. Audit security headers (only for web pages)
-    const security = tabUrl.startsWith('http')
-        ? await auditSecurityHeaders(tabUrl)
-        : [];
-
-    // 5. Audit link status (background can bypass CORS)
-    // We only check the first 50 links to avoid excessive resource usage
-    const links = [...scanResult.links];
+async function auditLinksInBackground(links: DomScanResult["links"]) {
     const uniqueLinks = Array.from(new Set(links.map(l => l.href)))
         .filter(url => url && typeof url === 'string' && url.toLowerCase().startsWith('http'))
         .slice(0, 50);
@@ -77,11 +107,7 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
-                const res = await fetch(url, {
-                    method: 'HEAD',
-                    mode: 'no-cors', // We try to get whatever we can
-                    signal: controller.signal
-                });
+                const res = await fetch(url, { method: 'HEAD', mode: 'no-cors', signal: controller.signal });
                 clearTimeout(timeoutId);
                 return { url, status: res.status, statusText: res.statusText };
             } catch (e) {
@@ -90,9 +116,8 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
         })
     );
 
-    // Map statuses back to links
     const statusMap = new Map(linkStatuses.map(s => [s.url, s]));
-    const enrichedLinks = links.map(link => {
+    return links.map(link => {
         const stats = statusMap.get(link.href);
         if (stats) {
             return {
@@ -104,44 +129,30 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
         }
         return link;
     });
+}
 
-    // 6. Audit image sizes (background can bypass CORS)
-    const images = [...scanResult.images];
+async function auditImagesInBackground(images: DomScanResult["images"]) {
     const uniqueImageUrls = Array.from(new Set(images.map(img => img.src)))
         .filter(src => src && typeof src === 'string' && src.toLowerCase().startsWith('http'))
-        .slice(0, 50); // Limit to top 50 images to avoid performance issues
+        .slice(0, 50);
 
     const imageSizes = await Promise.all(
         uniqueImageUrls.map(async (url) => {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-                // Try HEAD first
-                let res = await fetch(url, {
-                    method: 'HEAD',
-                    signal: controller.signal
-                });
-
+                let res = await fetch(url, { method: 'HEAD', signal: controller.signal });
                 let size = res.headers.get('content-length');
 
-                // If HEAD fails or has no size, try GET with a tiny range or just regular GET
                 if (!size || parseInt(size) === 0) {
-                    res = await fetch(url, {
-                        method: 'GET',
-                        headers: { 'Range': 'bytes=0-1' }, // Support range if server allows
-                        signal: controller.signal
-                    });
+                    res = await fetch(url, { method: 'GET', headers: { 'Range': 'bytes=0-1' }, signal: controller.signal });
                     size = res.headers.get('content-length');
-
-                    // If range failed or we got the whole thing, check content-range or length
                     const contentRange = res.headers.get('content-range');
                     if (contentRange) {
                         const match = contentRange.match(/\/(\d+)$/);
                         if (match) size = match[1];
                     }
                 }
-
                 clearTimeout(timeoutId);
                 return { url, size: size ? parseInt(size, 10) : undefined };
             } catch (e) {
@@ -151,7 +162,7 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
     );
 
     const imageSizeMap = new Map(imageSizes.map(s => [s.url, s.size]));
-    const enrichedImages = images.map(img => {
+    return images.map(img => {
         let size = img.size;
         if (img.src.startsWith('data:')) {
             size = Math.round((img.src.length - img.src.indexOf(',') - 1) * 0.75);
@@ -160,16 +171,6 @@ async function handleAnalyzePage(requestedTabId?: number): Promise<AuditData> {
         }
         return { ...img, size };
     });
-
-    // 7. Merge into final AuditData
-    const auditData: AuditData = {
-        ...scanResult,
-        images: enrichedImages,
-        links: enrichedLinks,
-        security,
-    };
-
-    return auditData;
 }
 
 /**

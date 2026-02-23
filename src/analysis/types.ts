@@ -106,6 +106,7 @@ export interface AuditData {
   fonts: FontInfo[];
   videos: VideoData[];
   schemas: SchemaInfo[];
+  isPartial?: boolean;
 }
 
 // ─── DOM Scan Result (subset returned by content script) ─────────────
@@ -132,7 +133,7 @@ export interface DomScanResult {
 }
 
 // ─── Chrome Extension Messaging ──────────────────────────────────────
-export type MessageType = "ANALYZE_PAGE" | "ANALYSIS_RESULT" | "ANALYSIS_ERROR";
+export type MessageType = "ANALYZE_PAGE" | "ANALYSIS_RESULT" | "ANALYSIS_ERROR" | "ANALYSIS_UPDATE";
 
 export interface AnalyzePageMessage {
   type: "ANALYZE_PAGE";
@@ -144,6 +145,12 @@ export interface AnalysisResultMessage {
   data: AuditData;
 }
 
+export interface AnalysisUpdateMessage {
+  type: "ANALYSIS_UPDATE";
+  tabId: number;
+  data: Partial<AuditData>;
+}
+
 export interface AnalysisErrorMessage {
   type: "ANALYSIS_ERROR";
   error: string;
@@ -152,4 +159,5 @@ export interface AnalysisErrorMessage {
 export type ExtensionMessage =
   | AnalyzePageMessage
   | AnalysisResultMessage
+  | AnalysisUpdateMessage
   | AnalysisErrorMessage;

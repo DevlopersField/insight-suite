@@ -4,6 +4,7 @@ import { ExternalLink, Link2, Share2, CheckCircle2, Globe, Lock } from "lucide-r
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface LinksAuditTabProps {
     links: LinkInfo[];
@@ -25,9 +26,14 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                 ? noFollowLinks
                 : links;
 
+    // Check if any link has an audit status to determine if we should show the status column
+    const isPartial = (links as any).isPartial; // We'll pass this via props or detect it
+
     return (
         <div className="space-y-4">
+            {/* ... stats ... */}
             <div className="grid grid-cols-4 gap-2">
+                {/* ... existing buttons ... */}
                 <button
                     onClick={() => setActiveFilter("all")}
                     className={`bg-card rounded border p-2 text-center transition-all hover:border-primary/50 ${activeFilter === "all" ? 'ring-2 ring-primary ring-inset border-primary' : 'border-border'}`}
@@ -59,8 +65,6 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
             </div>
 
             <div className="space-y-3">
-                {/* Managed Links (nofollow, etc) - Always show if they exist, or show filtered list? 
-                    User asked "on click it should show the list of links". I'll show the filtered list. */}
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-bold text-foreground uppercase tracking-wide flex items-center gap-1.5">
@@ -69,14 +73,22 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                                 activeFilter === "internal" ? "Internal Links" :
                                     activeFilter === "external" ? "External Links" : "No-Follow & Managed Links"} ({visibleLinks.length})
                         </h4>
-                        {activeFilter !== "all" && (
-                            <button
-                                onClick={() => setActiveFilter("all")}
-                                className="text-[10px] text-primary hover:underline font-medium"
-                            >
-                                Show All
-                            </button>
-                        )}
+                        <div className="flex items-center gap-3">
+                            {links.some(l => l.status === undefined) && (
+                                <span className="text-[9px] text-info animate-pulse flex items-center gap-1 font-medium bg-info/5 px-2 py-0.5 rounded border border-info/20">
+                                    <span className="w-1.5 h-1.5 bg-info rounded-full" />
+                                    Auditing Status...
+                                </span>
+                            )}
+                            {activeFilter !== "all" && (
+                                <button
+                                    onClick={() => setActiveFilter("all")}
+                                    className="text-[10px] text-primary hover:underline font-medium"
+                                >
+                                    Show All
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <ScrollArea className={`${new URLSearchParams(window.location.search).has("tabId") ? 'h-[600px]' : 'h-[300px]'} pr-1`}>
@@ -97,15 +109,32 @@ export const LinksAuditTab: React.FC<LinksAuditTabProps> = ({ links }) => {
                                                 {link.href}
                                             </div>
                                         </div>
-                                        {link.rel && (
-                                            <div className="flex flex-wrap justify-end gap-1 shrink-0 max-w-[120px]">
-                                                {link.rel.split(' ').filter(Boolean).map((r, ri) => (
-                                                    <Badge key={ri} variant="outline" className="text-[7px] h-3.5 px-1 font-bold border-primary/20 text-primary/70 uppercase leading-none bg-primary/5">
-                                                        {r}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                            {link.status !== undefined ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "text-[9px] h-4 px-1.5 font-mono",
+                                                        link.isBroken
+                                                            ? "bg-destructive/10 border-destructive/30 text-destructive"
+                                                            : "bg-success/10 border-success/30 text-success"
+                                                    )}
+                                                >
+                                                    {link.status === 0 ? "ERR" : link.status}
+                                                </Badge>
+                                            ) : (
+                                                <div className="w-8 h-4 bg-muted animate-pulse rounded" />
+                                            )}
+                                            {link.rel && (
+                                                <div className="flex flex-wrap justify-end gap-1 max-w-[120px]">
+                                                    {link.rel.split(' ').filter(Boolean).map((r, ri) => (
+                                                        <Badge key={ri} variant="outline" className="text-[7px] h-3.5 px-1 font-bold border-primary/20 text-primary/70 uppercase leading-none bg-primary/5">
+                                                            {r}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             )}
