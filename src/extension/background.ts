@@ -445,7 +445,24 @@ function injectedContentScan(): DomScanResult {
                         if (src.includes("fonts.gstatic.com") || src.includes("fonts.googleapis.com")) source = "google";
                         else if (src.includes("typekit")) source = "typekit";
                         const urlMatch = src.match(/url\(["']?([^"')]+)["']?\)/);
-                        fontMap.set(family, { family, source, weights: [weight], styles: [fStyle], url: source === "google" ? googleFontsUrl(family) : null, cssUrl: urlMatch ? urlMatch[1] : null });
+                        let fontUrl = urlMatch ? urlMatch[1] : null;
+
+                        // Resolve relative URL to absolute
+                        if (fontUrl && !fontUrl.startsWith('data:') && !fontUrl.startsWith('http')) {
+                            try {
+                                const baseUrl = sheet.href || window.location.href;
+                                fontUrl = new URL(fontUrl, baseUrl).href;
+                            } catch { }
+                        }
+
+                        fontMap.set(family, {
+                            family,
+                            source,
+                            weights: [weight],
+                            styles: [fStyle],
+                            url: source === "google" ? googleFontsUrl(family) : null,
+                            cssUrl: fontUrl
+                        });
                     }
                 }
             }

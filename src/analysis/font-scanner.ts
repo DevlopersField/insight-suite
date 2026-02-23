@@ -170,7 +170,18 @@ function scanStylesheetFontFaces(): Map<string, FontInfo> {
 
                         // Extract first URL from src
                         const urlMatch = src.match(/url\(["']?([^"')]+)["']?\)/);
-                        if (urlMatch) cssUrl = urlMatch[1];
+                        if (urlMatch) {
+                            cssUrl = urlMatch[1];
+                            // Resolve relative URL to absolute
+                            if (cssUrl && !cssUrl.startsWith('data:') && !cssUrl.startsWith('http')) {
+                                try {
+                                    const baseUrl = sheet.href || document.location.href;
+                                    cssUrl = new URL(cssUrl, baseUrl).href;
+                                } catch {
+                                    // Fallback to original if resolution fails
+                                }
+                            }
+                        }
 
                         fonts.set(family, {
                             family,
