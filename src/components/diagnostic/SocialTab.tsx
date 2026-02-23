@@ -6,7 +6,7 @@ interface Props {
 }
 
 const MetaRow = ({ label, value, isImage }: { label: string; value: string; isImage?: boolean }) => (
-  <div className="py-3">
+  <div className="py-3 px-4 -mx-4 hover:bg-muted/30 transition-colors">
     <div className="flex items-start gap-3 mb-2">
       <span className="text-xs text-muted-foreground w-28 shrink-0 uppercase tracking-wider pt-0.5">{label}</span>
       <span className="text-sm font-mono text-foreground break-all">{value || <span className="text-destructive italic">Missing</span>}</span>

@@ -15,7 +15,7 @@ export const SummaryTab = ({ data }: Props) => {
   return (
     <div className="space-y-4">
       {/* Title */}
-      <div className="bg-card rounded border border-border p-4">
+      <div className="bg-card rounded border border-border p-4 transition-all hover:bg-muted/5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Page Title</span>
           <StatusBadge status={titleStatus} label={`${data.titleLength} chars`} />
@@ -31,7 +31,7 @@ export const SummaryTab = ({ data }: Props) => {
       </div>
 
       {/* Description */}
-      <div className="bg-card rounded border border-border p-4">
+      <div className="bg-card rounded border border-border p-4 transition-all hover:bg-muted/5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs text-muted-foreground uppercase tracking-wider">Meta Description</span>
           <StatusBadge status={descStatus} label={`${data.descriptionLength} chars`} />

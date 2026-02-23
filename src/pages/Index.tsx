@@ -100,8 +100,8 @@ const Index = () => {
         <div className={`${isFullView ? 'max-w-[1200px]' : 'max-w-5xl'} mx-auto px-4 py-2.5`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded bg-primary/15 flex items-center justify-center">
-                <Shield className="w-3.5 h-3.5 text-primary" />
+              <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center overflow-hidden">
+                <img src="/icons/icon.svg" alt="AuditLens" className="w-4 h-4 object-contain" />
               </div>
               <div className="shrink-0">
                 <h1 className="text-sm font-semibold text-foreground tracking-tight leading-none mb-0.5">AuditLens</h1>
@@ -143,13 +143,13 @@ const Index = () => {
                 <button
                   onClick={handleOpenFullView}
                   title="Open in Full View"
-                  className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card hover:border-primary/50 text-muted-foreground hover:text-primary transition-all"
+                  className="w-8 h-8 flex items-center justify-center rounded border border-border bg-card hover:bg-accent/50 hover:border-primary/50 text-muted-foreground hover:text-primary transition-all"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
                 </button>
               )}
               <div className="text-[10px] font-mono whitespace-nowrap hidden sm:block">
-                <span className="opacity-40">v</span>1.0.0
+                <span className="opacity-40">v- </span>1.0.3
               </div>
             </div>
           </div>
