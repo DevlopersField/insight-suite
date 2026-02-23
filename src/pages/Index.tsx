@@ -12,6 +12,7 @@ import { SchemaTab } from "@/components/diagnostic/SchemaTab";
 import { ImagesSEOTab } from "@/components/diagnostic/ImagesSEOTab";
 import { LinksAuditTab } from "@/components/diagnostic/LinksAuditTab";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const tabs = [
   { id: "summary", label: "Summary", icon: FileText },
@@ -137,6 +138,7 @@ const Index = () => {
             </div>
 
             <div className="flex items-center gap-2 border-l border-border pl-4">
+              <ThemeToggle />
               {isExtension && !isFullView && (
                 <button
                   onClick={handleOpenFullView}
