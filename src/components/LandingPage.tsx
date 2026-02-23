@@ -29,7 +29,7 @@ export const LandingPage = ({ onAnalyze, onAnalyzeHTML, urlInput, setUrlInput, i
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium animate-in fade-in slide-in-from-bottom-3 duration-1000">
             <Zap className="w-3 h-3" />
-            <span>Introducing AuditLens v1.0.0</span>
+            <span>Introducing AuditLens v1.0.3</span>
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100">
@@ -183,10 +183,15 @@ export const LandingPage = ({ onAnalyze, onAnalyzeHTML, urlInput, setUrlInput, i
                 ))}
               </ul>
               <div className="flex flex-wrap gap-4 pt-4">
-                <button className="h-12 bg-white text-primary px-6 rounded-xl font-bold hover:bg-white/90 transition-all flex items-center gap-2 shadow-lg">
+                <a
+                  href="https://chromewebstore.google.com/detail/auditlens/fccglodapalpohcikmcfdlaidlfbocdf?authuser=0&hl=en-GB"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-12 bg-white text-primary px-6 rounded-xl font-bold hover:bg-white/90 transition-all flex items-center gap-2 shadow-lg"
+                >
                   <Download className="w-4 h-4" />
                   Add to Chrome
-                </button>
+                </a>
               </div>
             </div>
             <div className="hidden md:block">

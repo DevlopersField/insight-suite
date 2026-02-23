@@ -164,7 +164,7 @@ const Index = () => {
             <div className="flex items-center gap-2 border-l border-border pl-4">
               {isWebMode && (
                 <button
-                  onClick={() => window.open("#", "_blank")}
+                  onClick={() => window.open("https://chromewebstore.google.com/detail/auditlens/fccglodapalpohcikmcfdlaidlfbocdf?authuser=0&hl=en-GB", "_blank")}
                   className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90 transition-all shadow-sm"
                 >
                   <Download className="w-3 h-3" />
@@ -279,7 +279,7 @@ const Index = () => {
           </div>
 
           {/* Tabs */}
-          <div className="flex flex-wrap gap-1 mb-6 border-b border-border sticky top-14 bg-background/80 backdrop-blur-md z-10 py-1">
+          <div className="flex flex-wrap gap-1 mb-6 border-b border-border sticky top-14 bg-background/80 backdrop-blur-md z-10 pt-1 pb-0">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const hasHeadersIssue = tab.id === "headers" && headerIssueCount > 0;
