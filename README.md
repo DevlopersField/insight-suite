@@ -1,51 +1,70 @@
-# AuditLens 🚀
+# AuditLens
 
-**AuditLens** is a professional-grade SEO and technical audit tool designed for developers and SEO specialists. It provides instant insights into on-page SEO, technical health, performance assets, and security configurations.
+**Professional SEO & Technical Audit Companion for Developers**
 
-![AuditLens Header](https://placehold.co/1200x400/0d1b3e/ffffff?text=Dev+Buddy+Technical+Audit+Suite)
+## AuditLens – SEO & Technical Audit Chrome Extension
 
-## ✨ Key Features
+AuditLens is a powerful SEO and technical audit extension built for developers, SEO specialists, and digital teams. It instantly analyzes any webpage and provides structured insights into SEO, performance elements, content structure, and security — directly inside your browser.
 
-- 🔍 **SEO Diagnostics**: Instant analysis of Title, Meta Description, and Canonical tags.
-- 📐 **Heading Audit**: Complete heading tree visualization with hierarchy validation (H1-H6).
-- 🖼️ **Image Optimization**: Detects missing Alt text, identifies image formats (Next-gen support check), and scans for broken assets.
-- 📹 **Video Insights**: Finds embedded videos and checks for proper Schema.org markup.
-- 🎨 **Font Analysis**: Identifies all fonts used on the page, including weights and sources.
-- 🛠️ **Developer Tools**: Quick access to professional tools like PageSpeed Insights, GTmetrix, and W3C Validators.
-- 🔐 **Security Audit**: High-level check of common security headers and protocols.
+No switching tabs. No complicated setup. Just open a page and run a complete audit in seconds.
 
-## 🚀 Installation & Setup
+---
 
-### For Website Mode
-1. Clone the repository:
-   ```bash
-   git clone [repository-url]
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
+## 🔍 What You Can Audit
 
-### For Chrome Extension
-1. Build the project:
-   ```bash
-   npm run build
-   ```
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer Mode** (top right).
-4. Click **Load unpacked** and select the `dist` folder.
+### ✅ On-Page SEO
 
-## 🛠️ Tech Stack
+- Title, Meta Description & Canonical tag analysis  
+- Missing or duplicate metadata detection  
+- SEO structure validation  
 
-- **Framework**: React + Vite
-- **Styling**: Tailwind CSS + Shadcn/UI
-- **Icons**: Lucide React
-- **Analysis**: Custom DOM Scanning Engine
-- **Testing**: Vitest
+---
 
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+### 📐 Heading Structure
+
+- Full H1–H6 hierarchy visualization  
+- Missing H1 detection  
+- Heading order validation  
+
+---
+
+### 🖼️ Image Optimization
+
+- Missing ALT text detection  
+- Image format identification (JPG, PNG, WebP, etc.)  
+- Broken image detection  
+
+---
+
+### 📹 Video & Structured Data
+
+- Embedded video detection  
+- Schema.org markup check  
+
+---
+
+### 🎨 Fonts & Assets
+
+- Detect fonts used on the page  
+- Identify font weights and sources  
+
+---
+
+### 🔐 Security Checks
+
+- HTTPS validation  
+- Common security header inspection  
+
+---
+
+### 🛠 Developer Shortcuts
+
+- Quick access to PageSpeed Insights  
+- GTmetrix integration  
+- W3C Validators for deeper analysis  
+
+---
+
+## 🚀 Installation
+
+### Load as Chrome Extension
