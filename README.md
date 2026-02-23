@@ -67,4 +67,8 @@ No switching tabs. No complicated setup. Just open a page and run a complete aud
 
 ## 🚀 Installation
 
-### Load as Chrome Extension
+### Install from Chrome Web Store
+
+👉 **Install AuditLens:**  
+https://chromewebstore.google.com/detail/auditlens/fccglodapalpohcikmcfdlaidlfbocdf?authuser=0&hl=en-GB
+
